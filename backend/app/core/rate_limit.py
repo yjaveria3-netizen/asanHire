@@ -1,41 +1,65 @@
-import time
-from collections import defaultdict
-from fastapi import Request
+import logging
+from typing import List
+from fastapi import Request, Response
+from fastapi.responses import JSONResponse
+from slowapi import Limiter
+from slowapi.errors import RateLimitExceeded
+from slowapi.wrappers import Limit
+from limits import parse
 from app.core.config import settings
-from app.core.errors import RateLimitExceededError
 
-# In-memory storage for sliding window timestamps: key -> list of float timestamps
-_request_history = defaultdict(list)
+logger = logging.getLogger("asanhire.ratelimit")
 
-def rate_limit_public(request: Request):
-    """Rate limit for public candidate application routes (default: 20 req/min)."""
-    client_ip = request.client.host if request.client else "127.0.0.1"
-    key = f"pub:{client_ip}"
-    now = time.time()
-    cutoff = now - 60.0
+def get_client_ip(request: Request) -> str:
+    """
+    Resolves client IP.
+    Honors X-Forwarded-For ONLY when the direct client is a configured trusted proxy.
+    Otherwise defaults to request.client.host.
+    """
+    trusted_proxies: List[str] = [
+        p.strip() for p in (settings.TRUSTED_PROXIES or "").split(",") if p.strip()
+    ]
+    direct_ip = request.client.host if request.client else "127.0.0.1"
 
-    # Prune expired timestamps
-    _request_history[key] = [ts for ts in _request_history[key] if ts > cutoff]
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded and trusted_proxies and direct_ip in trusted_proxies:
+        client_ip = forwarded.split(",")[0].strip()
+        return client_ip
 
-    if len(_request_history[key]) >= settings.RATE_LIMIT_PUBLIC_PER_MINUTE:
-        raise RateLimitExceededError(
-            f"Rate limit exceeded: max {settings.RATE_LIMIT_PUBLIC_PER_MINUTE} requests per minute."
-        )
+    return direct_ip
 
-    _request_history[key].append(now)
+# Initialize slowapi Limiter
+limiter = Limiter(key_func=get_client_ip)
 
-def rate_limit_interview(request: Request):
-    """Rate limit for live interview interaction routes (default: 60 req/min)."""
-    client_ip = request.client.host if request.client else "127.0.0.1"
-    key = f"int:{client_ip}"
-    now = time.time()
-    cutoff = now - 60.0
+_public_limit_item = parse("10/minute")
+_interview_limit_item = parse("10/minute")
+_hr_limit_item = parse("60/minute")
 
-    _request_history[key] = [ts for ts in _request_history[key] if ts > cutoff]
+_public_limit = Limit(_public_limit_item, key_func=lambda: "ip", scope="public", per_method=False, methods=None, error_message="Too many requests. Please try again later.", exempt_when=None, cost=1, override_defaults=True)
+_interview_limit = Limit(_interview_limit_item, key_func=lambda: "ip", scope="interview", per_method=False, methods=None, error_message="Too many requests. Please try again later.", exempt_when=None, cost=1, override_defaults=True)
+_hr_limit = Limit(_hr_limit_item, key_func=lambda: "ip", scope="hr", per_method=False, methods=None, error_message="Too many requests. Please try again later.", exempt_when=None, cost=1, override_defaults=True)
 
-    if len(_request_history[key]) >= settings.RATE_LIMIT_INTERVIEW_PER_MINUTE:
-        raise RateLimitExceededError(
-            f"Rate limit exceeded: max {settings.RATE_LIMIT_INTERVIEW_PER_MINUTE} requests per minute."
-        )
+def rate_limit_public(request: Request) -> None:
+    """Limits public endpoints to 10 requests per minute per IP."""
+    ip = get_client_ip(request)
+    if not limiter._limiter.hit(_public_limit_item, f"pub:{ip}"):
+        raise RateLimitExceeded(_public_limit)
 
-    _request_history[key].append(now)
+def rate_limit_interview(request: Request) -> None:
+    """Limits candidate interview endpoints to 10 requests per minute per IP."""
+    ip = get_client_ip(request)
+    if not limiter._limiter.hit(_interview_limit_item, f"int:{ip}"):
+        raise RateLimitExceeded(_interview_limit)
+
+def rate_limit_hr(request: Request) -> None:
+    """Limits authenticated HR endpoints to 60 requests per minute per IP."""
+    ip = get_client_ip(request)
+    if not limiter._limiter.hit(_hr_limit_item, f"hr:{ip}"):
+        raise RateLimitExceeded(_hr_limit)
+
+def custom_rate_limit_exceeded_handler(request: Request, exc: Exception) -> Response:
+    """Returns generic 429 response without leaking internal details."""
+    return JSONResponse(
+        status_code=429,
+        content={"error": "Too many requests. Please try again later."}
+    )

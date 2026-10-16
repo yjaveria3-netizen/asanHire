@@ -11,9 +11,13 @@ services:
     envVars:
       - key: PORT
         value: 8000
-      - key: ENVIRONMENT
+      - key: APP_ENV
         value: production
+      - key: FRONTEND_URL
+        sync: false
       - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_PUBLISHABLE_KEY
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
@@ -21,11 +25,23 @@ services:
         sync: false
       - key: GEMINI_API_KEY
         sync: false
+      - key: GEMINI_MODEL
+        sync: false
       - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_MODEL
         sync: false
       - key: RESEND_API_KEY
         sync: false
+      - key: RESEND_FROM
+        sync: false
       - key: INTERVIEW_TOKEN_SALT
         sync: false
+      - key: DEMO_EMAIL_OVERRIDE
+        sync: false
       - key: BACKEND_CORS_ORIGINS
+        sync: false
+      - key: TRUSTED_PROXIES
+        sync: false
+      - key: SHOW_DOCS_IN_PROD
         sync: false

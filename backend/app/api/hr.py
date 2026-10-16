@@ -1,6 +1,11 @@
-from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status
+import logging
+from typing import List, Optional, Dict, Any
+from fastapi import APIRouter, Body, Depends, HTTPException, status
 from app.core.security import get_hr_user, HRUser, assert_job_owner
+from app.core.db import get_supabase_service_client
+from app.agents.rubric import run_rubric_for_job
+from app.agents.scheduling import schedule_job, invite_candidate_with_token
+from app.services.audit import write_audit_log
 from app.models.schemas import (
     JobCreateRequest,
     JobDetailResponse,
@@ -14,212 +19,405 @@ from app.models.schemas import (
     AllowRetryRequest,
     EmailPreviewResponse,
     AuditLogResponse,
-    AgentRunResponse
+    AgentRunResponse,
 )
 
-router = APIRouter(prefix="/api/hr", tags=["HR Admin & Candidate Management"])
+logger = logging.getLogger("asanhire.api.hr")
+
+router = APIRouter(
+    tags=["HR Admin & Candidate Management"],
+    dependencies=[Depends(get_hr_user)],
+)
+
+
+def _row_to_job_detail(row: Dict[str, Any], message: Optional[str] = None) -> JobDetailResponse:
+    return JobDetailResponse(
+        id=str(row["id"]),
+        owner_id=str(row["owner_id"]) if row.get("owner_id") else None,
+        title=row.get("title", ""),
+        description=row.get("description", ""),
+        skills=row.get("skills") or [],
+        experience_level=row.get("experience_level"),
+        rubric=row.get("rubric"),
+        top_n=int(row.get("top_n", 5)),
+        min_score=int(round(float(row.get("min_score", 60)))),
+        auto_invite=bool(row.get("auto_invite", True)),
+        deadline=row["deadline"],
+        status=row.get("status", "open"),
+        scheduler_ran_at=row.get("scheduler_ran_at"),
+        created_at=row.get("created_at"),
+        updated_at=row.get("updated_at"),
+        message=message,
+    )
+
 
 # ============================================================================
 # 1. Job Management
 # ============================================================================
 
-# OWNER: M1 (frontend) & M2 (backend)
-# TODO M2: Query jobs table where created_by = current_user.id
 @router.get("/jobs", response_model=List[JobDetailResponse], summary="List HR user jobs")
-async def list_jobs(current_user: HRUser = Depends(get_hr_user)):
+async def list_jobs(current_user: HRUser = Depends(get_hr_user)) -> List[JobDetailResponse]:
     """Returns all job requisitions owned by the authenticated HR user."""
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="TODO M2: Query jobs created_by user from Supabase"
+    client = get_supabase_service_client()
+    res = (
+        client.table("jobs")
+        .select("*")
+        .eq("owner_id", current_user.id)
+        .order("created_at", desc=True)
+        .execute()
+    )
+    rows = res.data or []
+    return [_row_to_job_detail(r) for r in rows]
+
+
+@router.post(
+    "/jobs",
+    response_model=JobDetailResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create job and generate rubric",
+)
+async def create_job(
+    job_in: JobCreateRequest,
+    current_user: HRUser = Depends(get_hr_user),
+) -> JobDetailResponse:
+    """
+    Creates a new job posting with owner_id = authenticated HR user,
+    runs the Rubric Agent, writes audit_log (action='job_created'),
+    and returns the job and rubric. If the LLM fails, saves the job
+    with rubric=null and status='draft' so HR can retry.
+    """
+    client = get_supabase_service_client()
+
+    insert_payload: Dict[str, Any] = {
+        "owner_id": current_user.id,
+        "title": job_in.title,
+        "description": job_in.description,
+        "skills": job_in.skills,
+        "experience_level": job_in.experience_level,
+        "deadline": job_in.deadline.isoformat(),
+        "top_n": job_in.top_n,
+        "min_score": job_in.min_score,
+        "auto_invite": job_in.auto_invite,
+        "status": "open",
+        "rubric": None,
+    }
+
+    res = client.table("jobs").insert(insert_payload).execute()
+    if not res.data:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create job",
+        )
+
+    job_row = res.data[0]
+    job_id = str(job_row["id"])
+
+    # Run Rubric Agent (handles DB update + agent_runs logging + draft fallback)
+    rubric_dict, final_status, fallback_msg = await run_rubric_for_job(
+        job_id=job_id,
+        title=job_in.title,
+        description=job_in.description,
+        skills=job_in.skills,
+        experience_level=job_in.experience_level,
     )
 
-# OWNER: M1 (frontend) & M2 (backend)
-# TODO M2: Call Rubric Agent (Gemini), persist job and rubric in DB, log agent run
-@router.post("/jobs", response_model=JobDetailResponse, status_code=status.HTTP_201_CREATED, summary="Create job and generate rubric")
-async def create_job(job_in: JobCreateRequest, current_user: HRUser = Depends(get_hr_user)):
-    """Creates a new job posting, triggers the Rubric Agent, and saves to database."""
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="TODO M2: Invoke Rubric Agent and insert job into Supabase"
+    job_row["rubric"] = rubric_dict
+    job_row["status"] = final_status
+
+    # Write audit_log (action='job_created')
+    write_audit_log(
+        owner_id=current_user.id,
+        actor=current_user.id,
+        action="job_created",
+        job_id=job_id,
+        from_status=None,
+        to_status=final_status,
+        reason="Job created by HR",
     )
 
-# OWNER: M1 (frontend) & M2 (backend)
-# TODO M2: Check assert_job_owner and fetch job details
+    return _row_to_job_detail(job_row, message=fallback_msg)
+
+
 @router.get("/jobs/{job_id}", response_model=JobDetailResponse, summary="Get job details")
-async def get_job_detail(job_id: str, current_user: HRUser = Depends(get_hr_user)):
-    """Returns single job requisition details and rubric."""
-    await assert_job_owner(current_user.id, job_id)
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="TODO M2: Retrieve job details from Supabase"
+async def get_job_detail(
+    job_id: str,
+    current_user: HRUser = Depends(get_hr_user),
+) -> JobDetailResponse:
+    """Returns single job requisition details and rubric (ownership checked)."""
+    job_row = await assert_job_owner(job_id=job_id, user_id=current_user.id)
+    return _row_to_job_detail(job_row)
+
+
+@router.post("/jobs/{job_id}/run-scheduler", summary="Manually run Scheduling Agent for a job")
+async def run_job_scheduler(
+    job_id: str,
+    current_user: HRUser = Depends(get_hr_user),
+) -> Dict[str, Any]:
+    """
+    HR-only endpoint that verifies job ownership via assert_job_owner,
+    executes deterministic schedule_job(job_id), and writes audit_log.
+    """
+    await assert_job_owner(job_id=job_id, user_id=current_user.id)
+    result = await schedule_job(job_id)
+
+    write_audit_log(
+        owner_id=current_user.id,
+        actor=current_user.id,
+        action="run_scheduler",
+        job_id=job_id,
+        reason="Manual scheduler run triggered by HR",
     )
+    return result
+
 
 # ============================================================================
 # 2. Candidate Inspection & Ranking
 # ============================================================================
 
-# OWNER: M1 (frontend) & M2 (backend)
-# TODO M2: Query candidates for job_id, ordered by coalesce(manual_score_override, resume_score) desc
-@router.get("/jobs/{job_id}/candidates", response_model=List[CandidateSummaryResponse], summary="List ranked candidates for job")
-async def list_job_candidates(job_id: str, current_user: HRUser = Depends(get_hr_user)):
-    """Returns ranked candidate leaderboard for the specified job."""
-    await assert_job_owner(current_user.id, job_id)
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="TODO M2: Query candidates ordered by score descending"
-    )
+@router.get(
+    "/jobs/{job_id}/candidates",
+    response_model=List[CandidateSummaryResponse],
+    summary="List ranked candidates for job",
+)
+async def list_job_candidates(
+    job_id: str,
+    current_user: HRUser = Depends(get_hr_user),
+) -> List[CandidateSummaryResponse]:
+    """
+    Returns candidates for the job ranked by effective_score
+    (hr_score_override if set, else ai_score, nulls last).
+    Includes a short summary of strengths and gaps from match.
+    Never returns resume_text.
+    """
+    await assert_job_owner(job_id=job_id, user_id=current_user.id)
 
-# OWNER: M1 (frontend) & M2 (backend)
-# TODO M2: Query candidate by id with joined interview, proctoring, evaluation report, and audit logs
+    client = get_supabase_service_client()
+    res = (
+        client.table("candidates")
+        .select(
+            "id, name, email, status, ai_score, hr_score_override, injection_suspected, match, created_at"
+        )
+        .eq("job_id", job_id)
+        .execute()
+    )
+    rows = res.data or []
+
+    summaries: List[CandidateSummaryResponse] = []
+    for r in rows:
+        hr_override = r.get("hr_score_override")
+        ai_score = r.get("ai_score")
+        effective = hr_override if hr_override is not None else ai_score
+
+        match_data = r.get("match") if isinstance(r.get("match"), dict) else {}
+        strengths = list(match_data.get("strengths") or [])[:3]
+        gaps = list(match_data.get("gaps") or [])[:3]
+
+        summaries.append(
+            CandidateSummaryResponse(
+                id=str(r["id"]),
+                name=r.get("name", ""),
+                email=r.get("email", ""),
+                status=r.get("status", "applied"),
+                ai_score=int(ai_score) if ai_score is not None else None,
+                hr_score_override=int(hr_override) if hr_override is not None else None,
+                effective_score=int(effective) if effective is not None else None,
+                injection_suspected=bool(r.get("injection_suspected", False)),
+                strengths=strengths,
+                gaps=gaps,
+                created_at=r.get("created_at"),
+            )
+        )
+
+    # Sort by effective_score descending, nulls last
+    summaries.sort(
+        key=lambda c: (c.effective_score is not None, c.effective_score if c.effective_score is not None else -1),
+        reverse=True,
+    )
+    return summaries
+
+
+# ============================================================================
+# 3. Unbuilt Routes (Stay 501 Not Implemented per Scope)
+# ============================================================================
+
 @router.get("/candidates/{candidate_id}", response_model=CandidateDetailResponse, summary="Get full candidate dossier")
 async def get_candidate_detail(candidate_id: str, current_user: HRUser = Depends(get_hr_user)):
-    """Returns comprehensive candidate record, transcript, trust score, and evaluation report."""
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="TODO M2: Fetch joined candidate dossier from Supabase"
+        detail="Not implemented",
     )
 
-# ============================================================================
-# 3. HR Full-Control Overrides (All Audit-Logged)
-# ============================================================================
 
-# OWNER: M1 (frontend) & M2 (backend)
-# TODO M2: Mutate status in candidates table, insert into audit_logs
 @router.post("/candidates/{candidate_id}/override-status", summary="Override candidate status (Reversible)")
 async def override_candidate_status(
     candidate_id: str,
     payload: StatusOverrideRequest,
-    current_user: HRUser = Depends(get_hr_user)
+    current_user: HRUser = Depends(get_hr_user),
 ):
-    """Allows HR to change candidate status backwards or forwards with mandatory justification."""
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="TODO M2: Update status in DB and invoke audit.log_audit_event"
+        detail="Not implemented",
     )
 
-# OWNER: M1 (frontend) & M2 (backend)
-# TODO M2: Mutate manual_score_override and override_reason, insert into audit_logs
+
 @router.post("/candidates/{candidate_id}/override-score", summary="Override candidate score")
 async def override_candidate_score(
     candidate_id: str,
     payload: ScoreOverrideRequest,
-    current_user: HRUser = Depends(get_hr_user)
+    current_user: HRUser = Depends(get_hr_user),
 ):
-    """Allows HR to override resume match score with mandatory reason."""
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="TODO M2: Set manual_score_override and log audit event"
+        detail="Not implemented",
     )
 
-# OWNER: M1 (frontend) & M2 (backend)
-# TODO M2: Generate raw token, hash and store, dispatch email via Resend if send_email=True, log audit
+
 @router.post("/candidates/{candidate_id}/invite", summary="Manual interview invitation / resend")
 async def invite_candidate(
     candidate_id: str,
-    payload: InviteRequest,
-    current_user: HRUser = Depends(get_hr_user)
-):
-    """Manually issues or re-issues an interview invitation token to the candidate."""
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="TODO M2: Issue token, send invitation email, log audit"
+    payload: Optional[InviteRequest] = Body(default=None),
+    current_user: HRUser = Depends(get_hr_user),
+) -> Dict[str, Any]:
+    """
+    Manual interview invitation (works for any candidate; also supports resending
+    with a fresh token by voiding any previous interview token).
+    Verifies ownership via assert_job_owner and writes audit_log + email_log.
+    """
+    client = get_supabase_service_client()
+    cand_res = client.table("candidates").select("*").eq("id", candidate_id).execute()
+    if not cand_res or not cand_res.data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Candidate not found",
+        )
+    candidate = cand_res.data[0]
+    job_id = str(candidate.get("job_id") or "")
+    job_row = await assert_job_owner(job_id=job_id, user_id=current_user.id)
+
+    send_email = payload.send_email if payload is not None else True
+    reason = (payload.reason if (payload and payload.reason) else "Manual invite by HR")
+
+    return await invite_candidate_with_token(
+        candidate=candidate,
+        job=job_row,
+        actor=current_user.id,
+        reason=reason,
+        send_email=send_email,
     )
 
-# OWNER: M1 (frontend) & M2 (backend)
-# TODO M2: Transition interview status to 'revoked', log audit
+
 @router.post("/candidates/{candidate_id}/cancel-invite", summary="Revoke active interview invitation")
 async def cancel_candidate_invite(
     candidate_id: str,
-    payload: CancelInviteRequest,
-    current_user: HRUser = Depends(get_hr_user)
-):
-    """Revokes active interview token immediately, preventing candidate from joining."""
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="TODO M2: Invalidate interview token and log audit"
+    payload: Optional[CancelInviteRequest] = Body(default=None),
+    current_user: HRUser = Depends(get_hr_user),
+) -> Dict[str, Any]:
+    """
+    Invalidates active interview token(s) for the candidate (voided=True),
+    sets candidate status back to 'shortlisted', verifies ownership via assert_job_owner,
+    and writes audit_log.
+    """
+    client = get_supabase_service_client()
+    cand_res = client.table("candidates").select("*").eq("id", candidate_id).execute()
+    if not cand_res or not cand_res.data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Candidate not found",
+        )
+    candidate = cand_res.data[0]
+    job_id = str(candidate.get("job_id") or "")
+    await assert_job_owner(job_id=job_id, user_id=current_user.id)
+
+    previous_status = str(candidate.get("status") or "invited")
+    reason = (payload.reason if (payload and payload.reason) else "Invite cancelled by HR")
+
+    # Void all interview tokens for this candidate
+    client.table("interviews").update({"voided": True}).eq("candidate_id", candidate_id).execute()
+
+    # Revert candidate status to 'shortlisted'
+    client.table("candidates").update({"status": "shortlisted"}).eq("id", candidate_id).execute()
+
+    write_audit_log(
+        owner_id=current_user.id,
+        actor=current_user.id,
+        action="invite_cancelled",
+        job_id=job_id,
+        candidate_id=candidate_id,
+        from_status=previous_status,
+        to_status="shortlisted",
+        reason=reason,
     )
 
-# OWNER: M1 (frontend) & M2 (backend)
-# TODO M2: Reset interview record, issue fresh token, log audit
+    return {
+        "candidate_id": candidate_id,
+        "status": "shortlisted",
+    }
+
+
 @router.post("/candidates/{candidate_id}/allow-retry", summary="Allow interview retry")
 async def allow_interview_retry(
     candidate_id: str,
     payload: AllowRetryRequest,
-    current_user: HRUser = Depends(get_hr_user)
+    current_user: HRUser = Depends(get_hr_user),
 ):
-    """Resets interview state to allow candidate a clean second attempt."""
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="TODO M2: Reset interview session and generate fresh token"
+        detail="Not implemented",
     )
 
-# OWNER: M1 (frontend) & M2 (backend)
-# TODO M2: Invoke Evaluation Supervisor Agent (Gemini) again and save new report revision
+
 @router.post("/candidates/{candidate_id}/regenerate-report", summary="Regenerate supervisor evaluation report")
 async def regenerate_evaluation_report(
     candidate_id: str,
-    current_user: HRUser = Depends(get_hr_user)
+    current_user: HRUser = Depends(get_hr_user),
 ):
-    """Triggers Supervisor Agent to re-evaluate transcript with updated context or weights."""
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="TODO M2: Re-run Supervisor Agent and update evaluation_reports"
+        detail="Not implemented",
     )
 
-# OWNER: M1 (frontend) & M2 (backend)
-# TODO M2: Set status to hired/rejected/on_hold, dispatch notification email via Resend if send_email=True, log audit
+
 @router.post("/candidates/{candidate_id}/decision", summary="Submit final hiring decision (Hire/Reject/Hold)")
 async def submit_hiring_decision(
     candidate_id: str,
     payload: DecisionRequest,
-    current_user: HRUser = Depends(get_hr_user)
+    current_user: HRUser = Depends(get_hr_user),
 ):
-    """Applies final hiring decision with optional notification email and full audit trail."""
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="TODO M2: Update status, dispatch email, log audit"
+        detail="Not implemented",
     )
 
-# ============================================================================
-# 4. Email Preview, Audit Logs & Observability
-# ============================================================================
 
-# OWNER: M1 (frontend) & M2 (backend)
-# TODO M2: Render email template for preview in HR modal before dispatch
 @router.get("/candidates/{candidate_id}/email-preview", response_model=EmailPreviewResponse, summary="Preview email before sending")
 async def preview_candidate_email(
     candidate_id: str,
     template: str = "interview_invite",
-    current_user: HRUser = Depends(get_hr_user)
+    current_user: HRUser = Depends(get_hr_user),
 ):
-    """Returns rendered subject, HTML, and text preview of email template."""
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="TODO M2: Render email template with candidate context"
+        detail="Not implemented",
     )
 
-# OWNER: M1 (frontend) & M2 (backend)
-# TODO M2: Query audit_logs table filtered by entity_id if provided
+
 @router.get("/audit-logs", response_model=List[AuditLogResponse], summary="Get system audit logs")
 async def get_audit_logs(
     entity_id: Optional[str] = None,
-    current_user: HRUser = Depends(get_hr_user)
+    current_user: HRUser = Depends(get_hr_user),
 ):
-    """Retrieves immutable audit trail for candidate or job actions."""
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="TODO M2: Query audit_logs from Supabase"
+        detail="Not implemented",
     )
 
-# OWNER: M1 (frontend) & M2 (backend)
-# TODO M2: Query agent_runs table filtered by job_id if provided
+
 @router.get("/agent-runs", response_model=List[AgentRunResponse], summary="Get AI agent execution logs")
 async def get_agent_runs(
     job_id: Optional[str] = None,
-    current_user: HRUser = Depends(get_hr_user)
+    current_user: HRUser = Depends(get_hr_user),
 ):
-    """Retrieves execution telemetry (model, tokens, latency) for all AI agents."""
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="TODO M2: Query agent_runs from Supabase"
+        detail="Not implemented",
     )

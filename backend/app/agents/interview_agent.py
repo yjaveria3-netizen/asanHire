@@ -1,38 +1,29 @@
-import json
-import logging
-from typing import List, Dict, Any
-from app.core.llm import call_json
-from app.prompts import INTERVIEW_SYSTEM_PROMPT, INTERVIEW_USER_TEMPLATE
+from typing import List, Dict, Any, Optional
 from app.models.schemas import InterviewTurnOutput
+from app.agents.interview import (
+    MAX_QUESTIONS,
+    MAX_FOLLOW_UPS,
+    build_resume_summary,
+    build_rubric_themes,
+    count_turns,
+    enforce_turn_limits,
+    run_interview_turn,
+)
 
-logger = logging.getLogger("asanhire.agents.interview")
 
-# OWNER: M2 (AI/backend engineer)
-# TODO M2: Implement live Groq Llama 3.3 turn orchestration, fallback to Gemini, speech-to-text context passing
 async def conduct_interview_turn(
     job_title: str,
-    rubric_summary: str,
-    resume_highlights: str,
-    conversation_history: List[Dict[str, str]],
-    question_index: int
+    rubric: Optional[Dict[str, Any]] = None,
+    resume_text: str = "",
+    match_data: Optional[Dict[str, Any]] = None,
+    transcript: Optional[List[Dict[str, Any]]] = None,
+    candidate_answer: str = "",
 ) -> InterviewTurnOutput:
-    """
-    Interview Agent: Generates conversational technical questions using Groq.
-    Maintains low voice turnaround latency.
-    """
-    user_prompt = INTERVIEW_USER_TEMPLATE.format(
-        rubric_summary=rubric_summary,
-        resume_highlights=resume_highlights,
-        conversation_history=json.dumps(conversation_history, indent=2),
-        question_index=question_index
-    )
-    
-    system_prompt = INTERVIEW_SYSTEM_PROMPT.format(job_title=job_title)
-    
-    return await call_json(
-        user_prompt=user_prompt,
-        system_prompt=system_prompt,
-        output_schema=InterviewTurnOutput,
-        provider="groq",
-        temperature=0.3
+    return await run_interview_turn(
+        job_title=job_title,
+        rubric=rubric,
+        resume_text=resume_text,
+        match_data=match_data,
+        transcript=transcript or [],
+        candidate_answer=candidate_answer,
     )

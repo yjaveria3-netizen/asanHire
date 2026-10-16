@@ -73,18 +73,20 @@
 
 ## 3. Model Routing & Fallback Architecture
 
-To optimize both user experience and operational cost, model routing is strictly separated:
+To optimize both user experience and operational cost, model routing is strictly separated across providers. Model names are **never hardcoded**; they are configured strictly via the `GROQ_MODEL` and `GEMINI_MODEL` environment variables and must be verified against each provider's current active model list by running `python scripts/list_models.py`:
 
-1. **Live Interview Agent $\to$ Groq (`llama-3.3-70b-versatile`)**
+1. **Live Interview Agent $\to$ Groq (`$GROQ_MODEL`)**
    - *Requirement:* Latency $< 1.5$ seconds for voice turnarounds.
-   - *Fallback:* If Groq returns 429 (rate limit) or 503, fallback to `gemini-1.5-flash` with optimized streaming.
-2. **Rubric Agent $\to$ Gemini (`gemini-1.5-flash`)**
+   - *Reasoning Models (`openai/gpt-oss-*`):* When reasoning models are configured on Groq, the engine requests JSON output mode, provisions generous token limits ($max\_tokens \ge 4096$) so thinking traces do not truncate JSON, sets `reasoning_effort="low"`, and extracts only the final message content, discarding internal reasoning tokens.
+   - *Fallback:* If Groq returns 429 (rate limit), 503, or connection failure, falls back to the configured Gemini model (`$GEMINI_MODEL`).
+2. **Rubric Agent $\to$ Google Gemini (`$GEMINI_MODEL`)**
+   - *SDK:* Official `google-genai` SDK (`from google import genai`) configured with `response_mime_type="application/json"`.
    - *Requirement:* Structured JSON schema generation from unstructured job requisitions.
-   - *Fallback:* Internal retry with exponential backoff (2 attempts) before throwing 502 Bad Gateway.
-3. **Matcher Agent $\to$ Gemini (`gemini-1.5-flash`)**
+   - *Fallback:* Internal retry with exponential backoff (2 attempts) before cross-provider fallback to Groq.
+3. **Matcher Agent $\to$ Google Gemini (`$GEMINI_MODEL`)**
    - *Requirement:* Parsing raw resume text against rubric criteria; scoring and gap analysis.
    - *Clamping:* Score output is programmatically clamped to $[0.0, 100.0]$ via Pydantic validator.
-4. **Evaluation Supervisor Agent $\to$ Gemini (`gemini-1.5-flash`)**
+4. **Evaluation Supervisor Agent $\to$ Google Gemini (`$GEMINI_MODEL`)**
    - *Requirement:* Multi-source synthesis combining candidate resume match, interview transcript, and proctoring trust score into a cohesive hiring recommendation.
 
 ---
