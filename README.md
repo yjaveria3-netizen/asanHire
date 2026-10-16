@@ -15,7 +15,10 @@ asanHire automates repetitive candidate screening while ensuring hiring managers
 3. **Scheduling Agent (Rule-based Python Code):** Auto-invites the top $N$ qualified candidates (scoring $\ge \text{min\_score}$) via transactional email at the job deadline.
 4. **Live Interview Agent (Groq Llama 3.3):** Conducts conversational voice screening with ultra-low latency response times.
 5. **Guardian Proctoring Agent (Rule-based Code):** Continuously monitors fullscreen adherence, tab switches, window blur, and paste events to compute a Candidate Trust Score (starts at 100%).
-6. **Evaluation Supervisor Agent (Gemini 1.5):** Synthesizes interview transcripts, resume match, and proctoring telemetry into an executive evaluation report with a recommendation (Hire, Reject, Hold).
+6. **Evaluation Supervisor Agent (Gemini):** Synthesizes interview transcripts, resume match, and proctoring telemetry into an executive evaluation report with a recommendation (Hire, Reject, Hold).
+
+> [!NOTE]
+> AI model names are environment variables (`GROQ_MODEL` and `GEMINI_MODEL`) that must be checked against each provider's current active model list (run `python scripts/list_models.py`).
 
 ---
 
@@ -101,13 +104,13 @@ The project is structured with working stubs so both engineers can develop concu
 
 ## 4. Setup & Running Instructions
 
-### 4.1 Backend (Port 8000)
+### 4.1 Run Backend (Port 8000)
 
 ```bash
 # 1. Navigate to backend directory
 cd backend
 
-# 2. Create and activate Python virtual environment
+# 2. Create and activate Python 3.11 virtual environment
 python -m venv .venv
 # On Windows (PowerShell):
 .venv\Scripts\Activate.ps1
@@ -117,17 +120,24 @@ source .venv/bin/activate
 # 3. Install pinned dependencies
 pip install -r requirements.txt
 
-# 4. Copy environment configuration
+# 4. Copy environment configuration and supply your keys
 cp .env.example .env
 
-# 5. Run test suite to verify security & score clamping
+# 5. Discover active provider models and verify GROQ_MODEL & GEMINI_MODEL in .env
+python scripts/list_models.py
+
+# 6. Run test suite
 pytest
 
-# 6. Start the FastAPI development server
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+# 7. Run provider verification scripts
+python scripts/check_llm.py
+python scripts/check_supabase.py
+
+# 8. Start the FastAPI development server
+uvicorn app.main:app --reload --port 8000
 ```
-* **Interactive API Documentation:** Visit [http://localhost:8000/docs](http://localhost:8000/docs)
-* **Health Check:** Visit [http://localhost:8000/health](http://localhost:8000/health)
+* **Interactive API Documentation:** Visit [http://localhost:8000/docs](http://localhost:8000/docs) (disabled in production unless `SHOW_DOCS_IN_PROD=true`)
+* **Health Check:** Visit [http://localhost:8000/health](http://localhost:8000/health) (returns `{"status":"ok"}`)
 
 ---
 
