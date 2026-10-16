@@ -2,109 +2,120 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { createClient } from "@/lib/supabase/client";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/brand/Logo";
-import { NeuCard } from "@/components/neu/NeuCard";
-import { NeuInput } from "@/components/neu/NeuInput";
-import { NeuButton } from "@/components/neu/NeuButton";
-import { ArrowRight } from "lucide-react";
-import { supabase } from "@/lib/supabase";
 
-// OWNER: M1 (frontend developer)
-// TODO M1: Wire Supabase auth.signInWithPassword with session cookie storage
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("hr@asanhire.dev");
-  const [password, setPassword] = useState("asanHire2026!");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const trimmedEmail = email.trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!trimmedEmail || !emailRegex.test(trimmedEmail) || !password) {
+      toast.error("Invalid email or password");
+      return;
+    }
+
     setLoading(true);
-    setError(null);
 
     try {
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
+      const supabase = createClient();
+      const { error } = await supabase.auth.signInWithPassword({
+        email: trimmedEmail,
         password,
       });
 
-      if (signInError) {
-        router.push("/hr");
+      if (error) {
+        toast.error("Invalid email or password");
         return;
       }
 
       router.push("/hr");
+      router.refresh();
     } catch {
-      router.push("/hr");
+      toast.error("Invalid email or password");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDemoLogin = () => {
-    router.push("/hr");
-  };
-
   return (
     <div className="min-h-screen bg-[#1E201E] flex items-center justify-center p-4">
-      <div className="max-w-md w-full">
-        {/* Centered 'tile' or 'mark' logo above the form */}
+      <div className="w-full max-w-md">
         <div className="text-center mb-6 flex flex-col items-center">
-          <Logo variant="tile" size="xl" href="/" priority className="mb-4" />
-          <p className="text-xs text-[#8A8B82] uppercase tracking-wider font-semibold">
-            Recruiter & Hiring Lead Portal
-          </p>
+          <Logo variant="tile" size="lg" href="/" priority className="mb-3" />
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-[#8A8B82]">
+            Recruiter & HR Portal
+          </h2>
         </div>
 
-        <NeuCard variant="raised" className="p-8">
-          {/* 'full' logo in the card header */}
-          <div className="flex flex-col items-center pb-5 mb-5 border-b border-[#8A8B82]/20">
-            <Logo variant="full" size="md" href={null} priority />
-            <span className="text-xs text-[#8A8B82] mt-2">Sign in to manage active pipelines</span>
-          </div>
+        <Card className="border-[#383A38] bg-[#262826] shadow-xl">
+          <CardHeader className="space-y-1 text-center">
+            <CardTitle className="text-2xl font-bold text-[#D9DADF]">Sign In</CardTitle>
+            <CardDescription className="text-[#8A8B82]">
+              Enter your credentials to access the HR Dashboard
+            </CardDescription>
+          </CardHeader>
 
-          <form onSubmit={handleLogin} className="flex flex-col gap-4">
-            {error && (
-              <div className="p-3 rounded-lg bg-[rgba(90,42,42,0.3)] border border-[#9E4A4A] text-xs text-[#E57373]">
-                {error}
+          <form onSubmit={handleSubmit}>
+            <CardContent className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="email">Work Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="hr@asanhire.dev"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={loading}
+                  required
+                  autoComplete="email"
+                />
               </div>
-            )}
 
-            <NeuInput
-              label="Work Email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="hr@asanhire.dev"
-              required
-            />
+              <div className="space-y-1.5">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={loading}
+                  required
+                  autoComplete="current-password"
+                />
+              </div>
+            </CardContent>
 
-            <NeuInput
-              label="Password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••••••"
-              required
-            />
-
-            <div className="pt-2">
-              <NeuButton type="submit" variant="primary" size="lg" className="w-full" disabled={loading}>
-                {loading ? "Authenticating..." : "Sign In to HR Space"} <ArrowRight className="w-4 h-4 ml-1" />
-              </NeuButton>
-            </div>
+            <CardFooter className="pt-2">
+              <Button
+                type="submit"
+                disabled={loading}
+                className="w-full font-semibold"
+              >
+                {loading ? "Signing In..." : "Sign In"}
+              </Button>
+            </CardFooter>
           </form>
-
-          <div className="mt-6 pt-5 border-t border-[#8A8B82]/20 flex flex-col gap-3">
-            <NeuButton variant="secondary" size="sm" onClick={handleDemoLogin} className="w-full">
-              Quick Sign In as Demo HR Lead
-            </NeuButton>
-            <p className="text-[11px] text-center text-[#8A8B82]">
-              Protected with Supabase Auth & JWT Row-Level Security
-            </p>
-          </div>
-        </NeuCard>
+        </Card>
       </div>
     </div>
   );
