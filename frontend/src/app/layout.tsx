@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
+import { Toaster } from "@/components/ui/sonner";
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -62,6 +63,7 @@ export default function RootLayout({
     <html lang="en" className={`dark ${plusJakarta.variable}`}>
       <body className="min-h-screen bg-[#1E201E] text-[#D9DADF] selection:bg-[#DD700B] selection:text-[#1E201E]">
         {children}
+        <Toaster />
       </body>
     </html>
   );

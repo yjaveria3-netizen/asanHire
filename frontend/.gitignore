@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Next.js
+.next/
+out/
+build/
+dist/
+
+# Env
+.env.local
+.env.*.local
+
+# Allow lib directory in frontend
+!src/lib/
+!src/lib/**
+!lib/
+!lib/**
