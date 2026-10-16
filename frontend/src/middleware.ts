@@ -1,34 +1,106 @@
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+import { createServerClient } from "@supabase/ssr";
+import { NextResponse, type NextRequest } from "next/server";
 
-// OWNER: M1 (frontend developer)
-// Middleware: Intercepts /hr/* requests to guarantee authentication
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Allow design-check in development for easy theme testing
-  if (pathname.startsWith("/hr/design-check")) {
+  const isHrPath = pathname.startsWith("/hr");
+  const isLoginPath = pathname === "/login";
+
+  // Public paths (/, /jobs/*, /interview/*, etc.) stay open and load immediately
+  if (!isHrPath && !isLoginPath) {
     return NextResponse.next();
   }
 
-  if (pathname.startsWith("/hr")) {
-    // Check for Supabase session auth cookie
-    const hasAuthCookie = request.cookies
-      .getAll()
-      .some((c) => c.name.includes("-auth-token") || c.name === "sb-access-token");
+  // Fast check: look for any Supabase auth token cookies
+  const allCookies = request.cookies.getAll();
+  const hasAuthCookie = allCookies.some(
+    (c) => c.name.includes("sb-") || c.name.includes("-auth-token")
+  );
 
-    // In local dev without auth initialized, allow pass-through to show mock UI
-    const isDev = process.env.NODE_ENV === "development";
-    if (!hasAuthCookie && !isDev) {
-      const loginUrl = new URL("/login", request.url);
-      loginUrl.searchParams.set("redirect", pathname);
-      return NextResponse.redirect(loginUrl);
+  // If accessing /hr without an auth cookie, redirect immediately to /login
+  if (isHrPath && !hasAuthCookie) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    url.searchParams.set("redirect", pathname);
+    return NextResponse.redirect(url);
+  }
+
+  // If accessing /login without an auth cookie, allow viewing the login page
+  if (isLoginPath && !hasAuthCookie) {
+    return NextResponse.next();
+  }
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  // If Supabase environment is unconfigured or a placeholder, do not attempt network calls
+  if (!supabaseUrl || !supabaseAnonKey || supabaseUrl.includes("placeholder")) {
+    if (isHrPath) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/login";
+      url.searchParams.set("redirect", pathname);
+      return NextResponse.redirect(url);
+    }
+    return NextResponse.next();
+  }
+
+  let supabaseResponse = NextResponse.next({
+    request,
+  });
+
+  try {
+    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet: Array<{ name: string; value: string; options?: any }>) {
+          cookiesToSet.forEach(({ name, value }) =>
+            request.cookies.set(name, value)
+          );
+          supabaseResponse = NextResponse.next({
+            request,
+          });
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          );
+        },
+      },
+    });
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    // 1. Redirect to /login if no active user session on /hr
+    if (isHrPath && !user) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/login";
+      url.searchParams.set("redirect", pathname);
+      return NextResponse.redirect(url);
+    }
+
+    // 2. Redirect to /hr if logged-in user visits /login
+    if (isLoginPath && user) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/hr";
+      return NextResponse.redirect(url);
+    }
+  } catch {
+    if (isHrPath) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/login";
+      url.searchParams.set("redirect", pathname);
+      return NextResponse.redirect(url);
     }
   }
 
-  return NextResponse.next();
+  return supabaseResponse;
 }
 
 export const config = {
-  matcher: ["/hr/:path*"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  ],
 };

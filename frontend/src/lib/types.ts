@@ -8,28 +8,16 @@ export type CandidateStatus =
   | "rejected"
   | "on_hold";
 
-export type JobStatus = "draft" | "active" | "closed";
-
-export type InterviewStatus = "pending" | "in_progress" | "completed" | "expired" | "revoked";
-
-export type ProctoringEventType =
-  | "tab_hidden"
-  | "window_blur"
-  | "fullscreen_exit"
-  | "paste"
-  | "copy"
-  | "no_face"
-  | "multiple_faces";
-
 export interface RubricCriterion {
   name: string;
-  weight: number;
-  description: string;
+  weight?: number;
+  description?: string;
+  [key: string]: any;
 }
 
-export interface JobRubric {
-  version: string;
+export interface Rubric {
   criteria: RubricCriterion[];
+  [key: string]: any;
 }
 
 export interface Job {
@@ -38,13 +26,13 @@ export interface Job {
   department: string;
   description: string;
   requirements: string;
-  rubric: JobRubric;
-  top_n: number;
-  min_score: number;
   deadline: string;
-  status: JobStatus;
+  status: string;
+  top_n?: number;
+  min_score?: number;
   candidate_count?: number;
-  created_at: string;
+  rubric?: Rubric;
+  [key: string]: any;
 }
 
 export interface Candidate {
@@ -53,60 +41,64 @@ export interface Candidate {
   full_name: string;
   email: string;
   phone?: string;
-  resume_url: string;
-  resume_text?: string;
+  resume_url?: string;
   status: CandidateStatus;
   resume_score?: number;
-  resume_feedback?: {
-    summary?: string;
-    strengths?: string[];
-    gaps?: string[];
-    criteria_breakdown?: Record<string, { score: number; feedback: string }>;
-  };
   manual_score_override?: number;
+  effective_score?: number;
   override_reason?: string;
-  created_at: string;
-}
-
-export interface TranscriptMessage {
-  speaker: "agent" | "candidate";
-  message: string;
-  timestamp?: string;
-}
-
-export interface ProctoringEvent {
-  id: string;
-  interview_id: string;
-  event_type: ProctoringEventType;
-  penalty: number;
-  payload: Record<string, any>;
-  client_timestamp: string;
+  rank?: number;
+  created_at?: string;
+  evaluation_report?: EvaluationReport;
+  proctoring_events?: ProctoringEvent[];
+  audit_logs?: AuditLog[];
+  [key: string]: any;
 }
 
 export interface EvaluationReport {
-  id: string;
-  candidate_id: string;
-  interview_id: string;
-  overall_score: number;
-  recommendation: "Hire" | "Reject" | "Hold";
-  summary: string;
-  technical_rating: number;
-  communication_rating: number;
-  cultural_rating: number;
-  key_strengths: string[];
-  red_flags: string[];
-  rubric_scores: Record<string, number>;
-  created_at: string;
+  id?: string;
+  candidate_id?: string;
+  recommendation?: "Hire" | "Reject" | "Hold" | string;
+  summary?: string;
+  strengths?: string[];
+  weaknesses?: string[];
+  key_strengths?: string[];
+  red_flags?: string[];
+  technical_rating?: number;
+  communication_rating?: number;
+  cultural_rating?: number;
+  score?: number;
+  rubric_scores?: Record<string, number>;
+  [key: string]: any;
+}
+
+export interface ProctoringEvent {
+  id?: string;
+  candidate_id?: string;
+  type?: string;
+  event_type: string;
+  timestamp?: string;
+  penalty?: number;
+  payload?: any;
+  details?: any;
+  [key: string]: any;
 }
 
 export interface AuditLog {
-  id: string;
-  user_id?: string;
-  entity_type: string;
-  entity_id: string;
+  id?: string;
   action: string;
-  previous_state: Record<string, any>;
-  new_state: Record<string, any>;
-  reason: string;
-  created_at: string;
+  performed_by: string;
+  reason?: string;
+  timestamp: string;
+  metadata?: any;
+  [key: string]: any;
+}
+
+export interface TranscriptMessage {
+  speaker?: "agent" | "candidate" | string;
+  message?: string;
+  sender?: string;
+  text?: string;
+  timestamp?: string;
+  [key: string]: any;
 }
