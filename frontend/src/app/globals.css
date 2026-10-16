@@ -84,3 +84,113 @@ body {
   align-items: center;
   gap: 0.375rem;
 }
+
+/* Page-Load & Decorative Keyframe Animations */
+@keyframes slideInLeft {
+  0% {
+    opacity: 0;
+    transform: translateX(-40px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  0% {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes softDrift1 {
+  0%, 100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(6px, -12px);
+  }
+}
+
+@keyframes softDrift2 {
+  0%, 100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(-8px, -16px);
+  }
+}
+
+@keyframes softDrift3 {
+  0%, 100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(10px, 8px);
+  }
+}
+
+@keyframes robotIdle {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes screenBlink {
+  0%, 80%, 100% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 0.35;
+  }
+}
+
+.animate-slide-left {
+  animation: slideInLeft 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-slide-right {
+  animation: slideInRight 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-drift-1 {
+  animation: softDrift1 5s ease-in-out infinite;
+}
+
+.animate-drift-2 {
+  animation: softDrift2 6.5s ease-in-out infinite;
+}
+
+.animate-drift-3 {
+  animation: softDrift3 8s ease-in-out infinite;
+}
+
+.animate-robot-idle {
+  animation: robotIdle 3s ease-in-out infinite;
+}
+
+.animate-screen-blink {
+  animation: screenBlink 2.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-slide-left,
+  .animate-slide-right,
+  .animate-drift-1,
+  .animate-drift-2,
+  .animate-drift-3,
+  .animate-robot-idle,
+  .animate-screen-blink {
+    animation: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+  }
+}
