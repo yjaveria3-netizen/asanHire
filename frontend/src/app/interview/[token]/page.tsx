@@ -10,9 +10,13 @@ import { FullscreenGate } from "@/components/interview/FullscreenGate";
 import { QuestionPanel } from "@/components/interview/QuestionPanel";
 import { MicButton } from "@/components/interview/MicButton";
 import { GuardianSidebar } from "@/components/interview/GuardianSidebar";
+import { MicCheckModal } from "@/components/interview/MicCheckModal";
 import { NeuCard } from "@/components/neu/NeuCard";
 import { NeuButton } from "@/components/neu/NeuButton";
+import { toast } from "sonner";
 import {
+  Mic,
+  MicOff,
   Volume2,
   VolumeX,
   Send,
@@ -23,6 +27,8 @@ import {
   HelpCircle,
   Shield,
   RotateCcw,
+  Eye,
+  Monitor,
 } from "lucide-react";
 
 export default function InterviewRoomPage() {
@@ -52,11 +58,13 @@ export default function InterviewRoomPage() {
   const [isRecording, setIsRecording] = useState(false);
   const [speechSupported, setSpeechSupported] = useState(true);
   const [autoSpeak, setAutoSpeak] = useState(true);
+  const [isMicCheckOpen, setIsMicCheckOpen] = useState(false);
   const recognitionRef = useRef<any>(null);
 
   // Guardian Proctoring State
   const [trustScore, setTrustScore] = useState(100);
   const [events, setEvents] = useState<Array<{ type: string; timestamp: string; penalty: number }>>([]);
+  const [activeTabAlert, setActiveTabAlert] = useState<string | null>(null);
   const lastEventTimesRef = useRef<Record<string, number>>({});
 
   // 1. Verify token on load
@@ -198,6 +206,20 @@ export default function InterviewRoomPage() {
 
       setEvents((prev) => [newEvt, ...prev.slice(0, 49)]);
       setTrustScore((prev) => Math.max(0, prev - penalty));
+
+      // Immediate Top Alert for tab switch / loss of focus
+      if (type === "tab_hidden" || type === "window_blur") {
+        setActiveTabAlert("Focus Infraction: Candidate navigated away to another tab or lost window focus. Please remain on this tab.");
+        toast.error("⚠️ Guardian Alert: Tab switch detected! Please stay on this tab to protect your score.", {
+          position: "top-center",
+          duration: 5000,
+        });
+      } else if (type === "paste") {
+        toast.warning("Guardian Alert: Clipboard paste detected in answer field.", {
+          position: "top-center",
+          duration: 4000,
+        });
+      }
 
       // Dispatch to backend API
       api.sendGuardianEvent(token, {
@@ -469,6 +491,17 @@ export default function InterviewRoomPage() {
             {autoSpeak ? <Volume2 className="w-4 h-4 text-[#8FD19E]" /> : <VolumeX className="w-4 h-4 text-[#8A8B82]" />}
           </button>
 
+          {/* Mic Check Button */}
+          <button
+            type="button"
+            onClick={() => setIsMicCheckOpen(true)}
+            className="p-2 px-2.5 rounded-lg bg-[#242724] border border-[#DD700B]/30 text-[#DD700B] hover:bg-[#DD700B]/10 transition flex items-center gap-1.5 text-xs font-semibold"
+            title="Check if microphone is audible"
+          >
+            <Mic className="w-3.5 h-3.5 text-[#DD700B]" />
+            <span className="hidden sm:inline">Mic Check</span>
+          </button>
+
           <span className="text-xs font-mono text-[#8FD19E] bg-[#8FD19E]/10 px-2.5 py-1 rounded-full flex items-center gap-1.5 border border-[#8FD19E]/20">
             <span className="w-2 h-2 rounded-full bg-[#8FD19E] animate-pulse" />
             Live Session
@@ -489,7 +522,44 @@ export default function InterviewRoomPage() {
       </header>
 
       {/* Main Workspace */}
-      <main className="max-w-7xl mx-auto w-full grid grid-cols-1 md:grid-cols-3 gap-6 my-auto py-6 items-start">
+      <main className="max-w-7xl mx-auto w-full my-auto py-4 flex flex-col gap-4">
+        {/* Top Active Tab Violation Banner (Stays at TOP) */}
+        {activeTabAlert && (
+          <div className="w-full bg-[#E57373]/20 border border-[#E57373] text-[#E57373] p-3.5 rounded-xl flex items-center justify-between text-xs font-semibold animate-pulse shadow-lg">
+            <div className="flex items-center gap-2.5">
+              <AlertTriangle className="w-4 h-4 shrink-0 text-[#E57373]" />
+              <span>{activeTabAlert}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setActiveTabAlert(null)}
+              className="underline hover:text-white text-[11px] font-mono ml-4 shrink-0 px-2 py-1 rounded bg-[#E57373]/30"
+            >
+              Acknowledge &amp; Return
+            </button>
+          </div>
+        )}
+
+        {/* Top Live Integrity Bar (Always at TOP of workspace) */}
+        <div className="w-full neu-inset p-3.5 rounded-xl flex items-center justify-between text-xs bg-[#242724] border border-[#383A38]">
+          <div className="flex items-center gap-3">
+            <Shield className={`w-4 h-4 ${trustScore >= 80 ? "text-[#8FD19E]" : "text-[#E57373]"}`} />
+            <span className="font-semibold text-[#D9DADF]">Live Integrity Score:</span>
+            <span className={`font-mono font-bold text-sm ${trustScore >= 80 ? "text-[#8FD19E]" : "text-[#E57373]"}`}>
+              {trustScore.toFixed(0)}%
+            </span>
+          </div>
+          <div className="flex items-center gap-3 text-[11px] text-[#8A8B82]">
+            <span className="hidden sm:inline">Active Telemetry: Fullscreen &bull; Focus &bull; Clipboard</span>
+            {events.length > 0 && (
+              <span className="font-mono text-[#E57373] bg-[#E57373]/15 px-2 py-0.5 rounded border border-[#E57373]/30 font-semibold">
+                {events.length} infraction{events.length > 1 ? "s" : ""}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
         {/* Left Column: Question & Answer Workspace */}
         <div className="md:col-span-2 flex flex-col gap-6">
           {/* Question Panel */}
@@ -541,15 +611,24 @@ export default function InterviewRoomPage() {
                 </div>
               </div>
 
-              <span className="text-xs font-mono text-[#8A8B82]">
-                {candidateAnswer.length} / 4000 characters
-              </span>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsMicCheckOpen(true)}
+                  className="text-xs text-[#DD700B] hover:underline flex items-center gap-1 font-semibold"
+                >
+                  <Mic className="w-3.5 h-3.5" /> Check Audio
+                </button>
+                <span className="text-xs font-mono text-[#8A8B82]">
+                  {candidateAnswer.length} / 4000 characters
+                </span>
+              </div>
             </div>
 
             {/* Editable Response Text Area */}
             <div className="flex flex-col gap-2">
               <label className="text-[11px] uppercase tracking-wider text-[#8A8B82] font-semibold">
-                Your Answer (Editable Transcription & Typed Fallback)
+                Your Answer (Editable Transcription &amp; Typed Fallback)
               </label>
               <textarea
                 value={candidateAnswer}
@@ -584,7 +663,14 @@ export default function InterviewRoomPage() {
         <div className="md:col-span-1">
           <GuardianSidebar trustScore={trustScore} recentEvents={events} />
         </div>
+        </div>
       </main>
+
+      {/* Mic Check Modal */}
+      <MicCheckModal
+        isOpen={isMicCheckOpen}
+        onClose={() => setIsMicCheckOpen(false)}
+      />
 
       {/* Footer */}
       <footer className="text-center py-3 border-t border-[#D9DADF]/10 max-w-7xl mx-auto w-full text-[11px] text-[#8A8B82] flex items-center justify-between">

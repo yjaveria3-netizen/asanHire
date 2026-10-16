@@ -14,6 +14,25 @@ interface CandidateTableProps {
 
 // OWNER: M1 (frontend developer)
 export const CandidateTable: React.FC<CandidateTableProps> = ({ candidates }) => {
+  // Always sort candidates so the highest scoring candidate is at the TOP (#1)
+  const sortedCandidates = [...candidates].sort((a, b) => {
+    const scoreA =
+      a.effective_score ??
+      a.manual_score_override ??
+      a.hr_score_override ??
+      a.ai_score ??
+      a.resume_score ??
+      0;
+    const scoreB =
+      b.effective_score ??
+      b.manual_score_override ??
+      b.hr_score_override ??
+      b.ai_score ??
+      b.resume_score ??
+      0;
+    return scoreB - scoreA;
+  });
+
   return (
     <div className="neu-raised rounded-2xl overflow-hidden border border-[#D9DADF]/5">
       <div className="overflow-x-auto">
@@ -29,9 +48,18 @@ export const CandidateTable: React.FC<CandidateTableProps> = ({ candidates }) =>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#8A8B82]/10 bg-[#2A2D2A]/40">
-            {candidates.map((candidate, index) => {
-              const effectiveScore = candidate.manual_score_override ?? candidate.resume_score ?? 0;
-              const hasOverride = candidate.manual_score_override !== undefined && candidate.manual_score_override !== null;
+            {sortedCandidates.map((candidate, index) => {
+              const effectiveScore =
+                candidate.effective_score ??
+                candidate.manual_score_override ??
+                candidate.hr_score_override ??
+                candidate.ai_score ??
+                candidate.resume_score ??
+                0;
+              const hasOverride =
+                candidate.manual_score_override !== undefined &&
+                candidate.manual_score_override !== null;
+              const displayName = candidate.full_name || candidate.name || "Candidate";
 
               return (
                 <tr key={candidate.id} className="hover:bg-[#2A2D2A] transition-colors">
@@ -39,7 +67,7 @@ export const CandidateTable: React.FC<CandidateTableProps> = ({ candidates }) =>
                     #{index + 1}
                   </td>
                   <td className="px-5 py-4">
-                    <div className="font-medium text-[#D9DADF]">{candidate.full_name}</div>
+                    <div className="font-medium text-[#D9DADF]">{displayName}</div>
                     <div className="text-xs text-[#8A8B82]">{candidate.email}</div>
                   </td>
                   <td className="px-5 py-4">

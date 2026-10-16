@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState } from "react";
-import { Maximize2, Mic, ShieldCheck, Eye, Copy, AlertCircle, Lock } from "lucide-react";
+import { Maximize2, Mic, ShieldCheck, Eye, Copy, AlertCircle, Lock, CheckCircle2 } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { NeuButton } from "@/components/neu/NeuButton";
+import { MicCheckModal } from "@/components/interview/MicCheckModal";
 
 interface FullscreenGateProps {
   onEnterFullscreen: () => void;
@@ -18,6 +19,8 @@ export const FullscreenGate: React.FC<FullscreenGateProps> = ({
 }) => {
   const [consentChecked, setConsentChecked] = useState<boolean>(false);
   const [requesting, setRequesting] = useState<boolean>(false);
+  const [isMicCheckOpen, setIsMicCheckOpen] = useState<boolean>(false);
+  const [micVerified, setMicVerified] = useState<boolean>(false);
 
   const requestPermissionsAndEnter = async () => {
     if (!consentChecked) return;
@@ -94,6 +97,49 @@ export const FullscreenGate: React.FC<FullscreenGateProps> = ({
           </div>
         </div>
 
+        {/* Hardware & Microphone Pre-Check Row */}
+        <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#202320] border border-[#383A38] text-left">
+          <div className="flex items-center gap-3 text-xs">
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+              micVerified
+                ? "bg-[#8FD19E]/15 border border-[#8FD19E]/30 text-[#8FD19E]"
+                : "bg-[#DD700B]/15 border border-[#DD700B]/30 text-[#DD700B]"
+            }`}>
+              <Mic className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="font-semibold text-[#D9DADF]">Microphone &amp; Audio Check</p>
+              <p className="text-[11px] text-[#8A8B82]">
+                {micVerified
+                  ? "Audio verified! You are loud and clear ✓"
+                  : "Check that your microphone is working and audible"}
+              </p>
+            </div>
+          </div>
+
+          <NeuButton
+            type="button"
+            size="sm"
+            variant={micVerified ? "secondary" : "ghost"}
+            onClick={() => setIsMicCheckOpen(true)}
+            className={`text-xs shrink-0 flex items-center gap-1.5 ${
+              micVerified
+                ? "border border-[#8FD19E]/40 text-[#8FD19E]"
+                : "border border-[#DD700B]/40 text-[#DD700B] hover:bg-[#DD700B]/10"
+            }`}
+          >
+            {micVerified ? (
+              <>
+                <CheckCircle2 className="w-3.5 h-3.5 text-[#8FD19E]" /> Verified
+              </>
+            ) : (
+              <>
+                <Mic className="w-3.5 h-3.5 text-[#DD700B]" /> Check Mic
+              </>
+            )}
+          </NeuButton>
+        </div>
+
         {/* Consent Checkbox */}
         <label className="flex items-center gap-3 text-left cursor-pointer select-none text-xs text-[#D9DADF] p-2 rounded-lg hover:bg-[#2A2D2A]/40 transition">
           <input
@@ -125,6 +171,13 @@ export const FullscreenGate: React.FC<FullscreenGateProps> = ({
             </p>
           )}
         </div>
+
+        {/* Interactive Mic Check Modal */}
+        <MicCheckModal
+          isOpen={isMicCheckOpen}
+          onClose={() => setIsMicCheckOpen(false)}
+          onVerified={() => setMicVerified(true)}
+        />
       </div>
     </div>
   );
