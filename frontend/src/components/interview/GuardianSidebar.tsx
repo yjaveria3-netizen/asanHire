@@ -1,18 +1,23 @@
 "use client";
 
 import React from "react";
-import { Shield, AlertTriangle, Eye, Copy, Monitor } from "lucide-react";
+import { Shield, AlertTriangle, Eye, Copy, Monitor, Camera } from "lucide-react";
 import { NeuProgress } from "@/components/neu/NeuProgress";
+import { WebcamProctor } from "@/components/interview/WebcamProctor";
 
 interface GuardianSidebarProps {
   trustScore: number;
   recentEvents: Array<{ type: string; timestamp: string; penalty: number }>;
+  onProctorEvent?: (type: string, penalty: number, detail?: string) => void;
+  isInterviewActive?: boolean;
 }
 
 // OWNER: M1 (frontend developer)
 export const GuardianSidebar: React.FC<GuardianSidebarProps> = ({
   trustScore = 100,
   recentEvents = [],
+  onProctorEvent,
+  isInterviewActive = true,
 }) => {
   const getScoreColor = (score: number) => {
     if (score >= 85) return "text-[#8FD19E]";
@@ -32,6 +37,12 @@ export const GuardianSidebar: React.FC<GuardianSidebarProps> = ({
         </span>
       </div>
 
+      {/* Live Edge Vision Proctor (Local Camera Feed) */}
+      <WebcamProctor
+        onEvent={onProctorEvent}
+        isInterviewActive={isInterviewActive}
+      />
+
       {/* Trust Score Display */}
       <div className="flex flex-col gap-2">
         <div className="flex items-baseline justify-between">
@@ -45,6 +56,12 @@ export const GuardianSidebar: React.FC<GuardianSidebarProps> = ({
 
       {/* Monitored Metrics Checklist */}
       <div className="flex flex-col gap-2 text-xs">
+        <div className="flex items-center justify-between p-2 rounded-lg bg-[#242724]">
+          <span className="flex items-center gap-2 text-[#D9DADF]">
+            <Camera className="w-3.5 h-3.5 text-[#8A8B82]" /> Camera Face Proctor
+          </span>
+          <span className="text-[11px] font-mono text-[#8FD19E]">Active</span>
+        </div>
         <div className="flex items-center justify-between p-2 rounded-lg bg-[#242724]">
           <span className="flex items-center gap-2 text-[#D9DADF]">
             <Monitor className="w-3.5 h-3.5 text-[#8A8B82]" /> Fullscreen Lock
@@ -71,7 +88,7 @@ export const GuardianSidebar: React.FC<GuardianSidebarProps> = ({
           Proctor Guidance
         </p>
         <p>
-          Please stay in fullscreen mode. Avoid switching tabs, minimizing your window, or copying external text.
+          Please stay in fullscreen and keep your face visible in frame. Avoid switching tabs, minimizing your window, or pasting external content.
         </p>
       </div>
 

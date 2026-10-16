@@ -219,6 +219,16 @@ export default function InterviewRoomPage() {
           position: "top-center",
           duration: 4000,
         });
+      } else if (type === "no_face") {
+        toast.warning("📷 Camera Alert: No face detected in frame. Please remain centered in your camera view.", {
+          position: "top-center",
+          duration: 4000,
+        });
+      } else if (type === "multiple_faces") {
+        toast.error("⚠️ Camera Alert: Multiple people detected in frame. Candidate must test alone.", {
+          position: "top-center",
+          duration: 5000,
+        });
       }
 
       // Dispatch to backend API
@@ -550,7 +560,7 @@ export default function InterviewRoomPage() {
             </span>
           </div>
           <div className="flex items-center gap-3 text-[11px] text-[#8A8B82]">
-            <span className="hidden sm:inline">Active Telemetry: Fullscreen &bull; Focus &bull; Clipboard</span>
+            <span className="hidden sm:inline">Active Telemetry: Fullscreen &bull; Focus &bull; Vision &bull; Clipboard</span>
             {events.length > 0 && (
               <span className="font-mono text-[#E57373] bg-[#E57373]/15 px-2 py-0.5 rounded border border-[#E57373]/30 font-semibold">
                 {events.length} infraction{events.length > 1 ? "s" : ""}
@@ -661,7 +671,12 @@ export default function InterviewRoomPage() {
 
         {/* Right Column: Guardian Proctor Sidebar */}
         <div className="md:col-span-1">
-          <GuardianSidebar trustScore={trustScore} recentEvents={events} />
+          <GuardianSidebar
+            trustScore={trustScore}
+            recentEvents={events}
+            onProctorEvent={recordGuardianEvent}
+            isInterviewActive={hasEnteredFullscreen && !isCompleted}
+          />
         </div>
         </div>
       </main>

@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     # Application & Environment
     APP_ENV: str = "dev"
     PORT: int = 8000
-    FRONTEND_URL: str = "http://localhost:3000"
+    FRONTEND_URL: str = "https://asan-hire.vercel.app"
     BACKEND_CORS_ORIGINS: Optional[str] = None
     TRUSTED_PROXIES: Optional[str] = None
     SHOW_DOCS_IN_PROD: bool = False
@@ -59,7 +59,13 @@ class Settings(BaseSettings):
 
     @property
     def cors_origins_list(self) -> List[str]:
-        origins = {"http://localhost:3000"}
+        origins = {
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            "https://asan-hire.vercel.app",
+            "https://alternate-spectral-glacier-4305-github-app.alternatefutures.ai",
+            "https://alternate-sapphire-burst-2881-github-app.alternatefutures.ai",
+        }
         if self.FRONTEND_URL and self.FRONTEND_URL.strip() and self.FRONTEND_URL != "*":
             origins.add(self.FRONTEND_URL.strip().rstrip("/"))
         if self.BACKEND_CORS_ORIGINS:

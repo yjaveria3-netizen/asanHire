@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 import logging
 from typing import List, Optional, Dict, Any
-from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, status
 from app.core.security import get_hr_user, HRUser, assert_job_owner
 from app.core.db import get_supabase_service_client
 from app.agents.rubric import run_rubric_for_job
@@ -441,6 +441,7 @@ async def override_candidate_score(
 @router.post("/candidates/{candidate_id}/invite", summary="Manual interview invitation / resend")
 async def invite_candidate(
     candidate_id: str,
+    request: Request,
     payload: Optional[InviteRequest] = Body(default=None),
     current_user: HRUser = Depends(get_hr_user),
 ) -> Dict[str, Any]:
@@ -457,6 +458,15 @@ async def invite_candidate(
     send_email = payload.send_email if payload is not None else True
     reason = (payload.reason if (payload and payload.reason) else "Manual invite by HR")
 
+    # Dynamically extract client origin so the invite link matches the recruiter's frontend app
+    origin_header = request.headers.get("origin") or request.headers.get("referer")
+    frontend_base = None
+    if origin_header:
+        from urllib.parse import urlparse
+        p = urlparse(origin_header)
+        if p.scheme and p.netloc:
+            frontend_base = f"{p.scheme}://{p.netloc}"
+
     return await invite_candidate_with_token(
         candidate=candidate,
         job=job_row,
@@ -464,6 +474,7 @@ async def invite_candidate(
         reason=reason,
         send_email=send_email,
         hr_sender_email=current_user.email,
+        frontend_url=frontend_base,
     )
 
 
@@ -509,6 +520,7 @@ async def cancel_candidate_invite(
 @router.post("/candidates/{candidate_id}/allow-retry", summary="Allow interview retry")
 async def allow_interview_retry(
     candidate_id: str,
+    request: Request,
     payload: Optional[AllowRetryRequest] = Body(default=None),
     current_user: HRUser = Depends(get_hr_user),
 ) -> Dict[str, Any]:
@@ -524,6 +536,15 @@ async def allow_interview_retry(
 
     previous_status = str(candidate.get("status") or "interviewed")
     reason = (payload.reason if (payload and payload.reason) else "Interview retry allowed by HR")
+
+    # Extract client origin for invite link
+    origin_header = request.headers.get("origin") or request.headers.get("referer")
+    frontend_base = None
+    if origin_header:
+        from urllib.parse import urlparse
+        p = urlparse(origin_header)
+        if p.scheme and p.netloc:
+            frontend_base = f"{p.scheme}://{p.netloc}"
 
     int_res = (
         client.table("interviews")
@@ -554,6 +575,7 @@ async def allow_interview_retry(
             reason=reason,
             send_email=True,
             hr_sender_email=current_user.email,
+            frontend_url=frontend_base,
         )
 
     write_audit_log(

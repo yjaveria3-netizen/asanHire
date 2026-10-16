@@ -46,6 +46,7 @@ async def invite_candidate_with_token(
     reason: str = "Auto-invited by Scheduling Agent",
     send_email: bool = True,
     hr_sender_email: Optional[str] = None,
+    frontend_url: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Creates an interview row with a fresh random token (secrets.token_urlsafe(32)),
@@ -93,7 +94,11 @@ async def invite_candidate_with_token(
     client.table("candidates").update({"status": "invited"}).eq("id", candidate_id).execute()
 
     # Send fixed-template invite email via Resend & write email_log
-    frontend_base = (settings.FRONTEND_URL or "http://localhost:3000").rstrip("/")
+    frontend_base = (
+        frontend_url
+        or (settings.FRONTEND_URL if settings.FRONTEND_URL and "localhost" not in settings.FRONTEND_URL else None)
+        or "https://asan-hire.vercel.app"
+    ).rstrip("/")
     interview_url = f"{frontend_base}/interview/{raw_token}"
 
     if send_email:
