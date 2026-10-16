@@ -10,11 +10,11 @@ TEMPLATES = {
     "interview_invite": {
         "subject": "You're Invited to Interview: {job_title} at asanHire",
         "html": """
-        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #1E201E; color: #D9DADF; padding: 24px; border-radius: 8px; max-width: 600px; margin: 0 auto;">
+        <div style="font-family: 'Paquito', Georgia, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #1E201E; color: #D9DADF; padding: 24px; border-radius: 8px; max-width: 600px; margin: 0 auto;">
             <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px; border-bottom: 1px solid #2A2D2A;">
                 <tr>
                     <td style="padding-bottom: 16px;">
-                        <img src="{logo_url}" alt="asanHire" width="240" height="65" style="display: block; border: 0; outline: none; text-decoration: none;" />
+                        <img src="{logo_url}" alt="asanHire" width="280" height="76" style="display: block; border: 0; outline: none; text-decoration: none;" />
                     </td>
                 </tr>
             </table>
@@ -34,11 +34,11 @@ TEMPLATES = {
     "hired": {
         "subject": "Offer Extended: {job_title} at asanHire",
         "html": """
-        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #1E201E; color: #D9DADF; padding: 24px; border-radius: 8px; max-width: 600px; margin: 0 auto;">
+        <div style="font-family: 'Paquito', Georgia, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #1E201E; color: #D9DADF; padding: 24px; border-radius: 8px; max-width: 600px; margin: 0 auto;">
             <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px; border-bottom: 1px solid #2A2D2A;">
                 <tr>
                     <td style="padding-bottom: 16px;">
-                        <img src="{logo_url}" alt="asanHire" width="240" height="65" style="display: block; border: 0; outline: none; text-decoration: none;" />
+                        <img src="{logo_url}" alt="asanHire" width="280" height="76" style="display: block; border: 0; outline: none; text-decoration: none;" />
                     </td>
                 </tr>
             </table>
@@ -53,11 +53,11 @@ TEMPLATES = {
     "rejected": {
         "subject": "Update regarding your application for {job_title}",
         "html": """
-        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #1E201E; color: #D9DADF; padding: 24px; border-radius: 8px; max-width: 600px; margin: 0 auto;">
+        <div style="font-family: 'Paquito', Georgia, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #1E201E; color: #D9DADF; padding: 24px; border-radius: 8px; max-width: 600px; margin: 0 auto;">
             <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px; border-bottom: 1px solid #2A2D2A;">
                 <tr>
                     <td style="padding-bottom: 16px;">
-                        <img src="{logo_url}" alt="asanHire" width="240" height="65" style="display: block; border: 0; outline: none; text-decoration: none;" />
+                        <img src="{logo_url}" alt="asanHire" width="280" height="76" style="display: block; border: 0; outline: none; text-decoration: none;" />
                     </td>
                 </tr>
             </table>
@@ -72,11 +72,11 @@ TEMPLATES = {
     "on_hold": {
         "subject": "Application Update: {job_title} at asanHire",
         "html": """
-        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #1E201E; color: #D9DADF; padding: 24px; border-radius: 8px; max-width: 600px; margin: 0 auto;">
+        <div style="font-family: 'Paquito', Georgia, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #1E201E; color: #D9DADF; padding: 24px; border-radius: 8px; max-width: 600px; margin: 0 auto;">
             <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px; border-bottom: 1px solid #2A2D2A;">
                 <tr>
                     <td style="padding-bottom: 16px;">
-                        <img src="{logo_url}" alt="asanHire" width="240" height="65" style="display: block; border: 0; outline: none; text-decoration: none;" />
+                        <img src="{logo_url}" alt="asanHire" width="280" height="76" style="display: block; border: 0; outline: none; text-decoration: none;" />
                     </td>
                 </tr>
             </table>
@@ -90,11 +90,11 @@ TEMPLATES = {
     "corrected_decision": {
         "subject": "Status Correction: Your Application for {job_title} at asanHire",
         "html": """
-        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #1E201E; color: #D9DADF; padding: 24px; border-radius: 8px; max-width: 600px; margin: 0 auto;">
+        <div style="font-family: 'Paquito', Georgia, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #1E201E; color: #D9DADF; padding: 24px; border-radius: 8px; max-width: 600px; margin: 0 auto;">
             <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px; border-bottom: 1px solid #2A2D2A;">
                 <tr>
                     <td style="padding-bottom: 16px;">
-                        <img src="{logo_url}" alt="asanHire" width="240" height="65" style="display: block; border: 0; outline: none; text-decoration: none;" />
+                        <img src="{logo_url}" alt="asanHire" width="280" height="76" style="display: block; border: 0; outline: none; text-decoration: none;" />
                     </td>
                 </tr>
             </table>

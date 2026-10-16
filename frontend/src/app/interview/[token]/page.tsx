@@ -478,7 +478,7 @@ export default function InterviewRoomPage() {
       {/* Top Header */}
       <header className="flex items-center justify-between pb-4 border-b border-[#D9DADF]/10 max-w-7xl mx-auto w-full">
         <div className="flex items-center gap-4">
-          <Logo variant="full" size="sm" href="/" priority />
+          <Logo variant="full" size="md" href="/" priority />
           <div className="hidden sm:block pl-3 border-l border-[#8A8B82]/20">
             <h1 className="text-xs font-bold text-[#D9DADF] truncate max-w-xs">{jobTitle}</h1>
             <p className="text-[10px] text-[#8A8B82]">Candidate: {candidateName}</p>

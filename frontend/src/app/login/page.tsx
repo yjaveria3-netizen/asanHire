@@ -163,7 +163,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Logo + Subtitle */}
         <div className="flex flex-col items-center mb-6 gap-3">
-          <Logo variant="full" size="md" href="/" priority />
+          <Logo variant="full" size="lg" href="/" priority />
           <p className="text-xs font-semibold uppercase tracking-wider text-[#8A8B82]">
             Recruiter &amp; HR Sovereign Portal
           </p>
