@@ -1,0 +1,26 @@
+{
+  "name": "asanHire",
+  "short_name": "asanHire",
+  "description": "AI Hiring Workflow & Proctoring Orchestration",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1E201E",
+  "theme_color": "#1E201E",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
