@@ -135,26 +135,42 @@ class MatcherOutput(BaseModel):
 class AnswerScore(BaseModel):
     criterion: str
     score: int = Field(..., ge=0, le=10)
-    evidence: str
+    evidence: str = ""
+    note: Optional[str] = None
+
+    @field_validator("score", mode="before")
+    @classmethod
+    def clamp_answer_score(cls, v: Any) -> int:
+        try:
+            val = int(round(float(v)))
+            return max(0, min(10, val))
+        except (ValueError, TypeError):
+            return 0
+
+    def model_post_init(self, __context: Any) -> None:
+        if not self.evidence and self.note:
+            self.evidence = self.note
+        elif self.evidence and not self.note:
+            self.note = self.evidence
 
 
 class InterviewTurnOutput(BaseModel):
     score_last_answer: Optional[AnswerScore] = None
     action: str = Field("ask_next", description="follow_up | ask_next | end")
-    spoken_text: Optional[str] = None
+    spoken_text: str = Field(..., min_length=1)
     injection_suspected: bool = False
-    next_question: Optional[str] = None
-    question_index: Optional[int] = None
-    is_complete: Optional[bool] = None
-    interviewer_notes: Optional[str] = None
 
-    def model_post_init(self, __context: Any) -> None:
-        if not self.spoken_text and self.next_question:
-            self.spoken_text = self.next_question
-        elif not self.next_question and self.spoken_text:
-            self.next_question = self.spoken_text
-        if self.is_complete is None:
-            self.is_complete = (self.action == "end")
+    @field_validator("action", mode="before")
+    @classmethod
+    def validate_action(cls, v: Any) -> str:
+        if not isinstance(v, str):
+            return "ask_next"
+        cleaned = v.strip().lower()
+        if cleaned == "ask":
+            return "ask_next"
+        if cleaned not in {"follow_up", "ask_next", "end"}:
+            raise ValueError(f"Invalid interview action: {v}")
+        return cleaned
 
 
 class EvidenceItem(BaseModel):
@@ -242,20 +258,35 @@ class InterviewVerifyResponse(BaseModel):
 
 
 class InterviewStartResponse(BaseModel):
-    interview_id: str
-    status: str
-    initial_question: str
+    spoken_text: str
 
 
-class InterviewTurnRequest(BaseModel):
-    transcript_text: str = Field(..., min_length=1, max_length=4000)
+class InterviewAnswerRequest(BaseModel):
+    answer: Optional[str] = None
+    transcript_text: Optional[str] = None
+    text: Optional[str] = None
     audio_duration_seconds: Optional[float] = None
 
+    def get_clean_answer(self) -> str:
+        raw = self.answer if self.answer is not None else (self.transcript_text if self.transcript_text is not None else self.text)
+        if not isinstance(raw, str):
+            raise ValueError("Answer text is required")
+        cleaned = _CTRL_MULTI_LINE_RE.sub("", raw).strip()
+        if len(cleaned) < 1 or len(cleaned) > 4000:
+            raise ValueError("Answer must be between 1 and 4000 characters")
+        return cleaned
 
-class InterviewTurnResponse(BaseModel):
-    next_question: str
-    question_index: int
-    is_complete: bool
+
+# Alias for backward compatibility
+InterviewTurnRequest = InterviewAnswerRequest
+
+
+class InterviewAnswerResponse(BaseModel):
+    spoken_text: str
+    action: str
+
+
+InterviewTurnResponse = InterviewAnswerResponse
 
 
 class GuardianEventRequest(BaseModel):
@@ -270,9 +301,11 @@ class GuardianEventResponse(BaseModel):
     infraction_count: int
 
 
-class InterviewCompleteResponse(BaseModel):
-    status: str
-    message: str
+class InterviewFinishResponse(BaseModel):
+    status: str = "interviewed"
+
+
+InterviewCompleteResponse = InterviewFinishResponse
 
 
 # ============================================================================
