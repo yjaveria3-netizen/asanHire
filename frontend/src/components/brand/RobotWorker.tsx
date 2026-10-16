@@ -7,7 +7,7 @@ interface RobotWorkerProps {
 export const RobotWorker: React.FC<RobotWorkerProps> = ({ className = "" }) => {
   return (
     <div className={`relative inline-flex items-center justify-center select-none ${className}`}>
-      {/* Softly drifting decorative dots (minimal, subtle floating in site palette) */}
+      {/* Softly drifting decorative dots (subtle movement in site palette) */}
       <span
         className="absolute -top-3 -left-4 w-2 h-2 rounded-full bg-[#DD700B] animate-drift-1 pointer-events-none"
         aria-hidden="true"
@@ -21,17 +21,17 @@ export const RobotWorker: React.FC<RobotWorkerProps> = ({ className = "" }) => {
         aria-hidden="true"
       />
 
-      {/* Robot Mascot Working on Laptop */}
-      <div className="animate-robot-idle" aria-label="Friendly AI assistant analyzing candidate rubrics">
+      {/* Robot Mascot Working on Laptop with AH on Shirt */}
+      <div className="animate-robot-idle" aria-label="Friendly AI assistant with AH shirt analyzing candidates">
         <svg
           viewBox="0 0 200 160"
-          width="180"
-          height="144"
-          className="w-full h-auto drop-shadow-[0_8px_24px_rgba(221,112,11,0.18)]"
+          width="190"
+          height="152"
+          className="w-full h-auto drop-shadow-[0_8px_24px_rgba(221,112,11,0.2)]"
           xmlns="http://www.w3.org/2000/svg"
         >
           <defs>
-            <filter id="robot-screen-glow" x="-20%" y="-20%" width="140%" height="140%">
+            <filter id="worker-screen-glow" x="-20%" y="-20%" width="140%" height="140%">
               <feGaussianBlur stdDeviation="3" result="glow" />
               <feMerge>
                 <feMergeNode in="glow" />
@@ -42,20 +42,20 @@ export const RobotWorker: React.FC<RobotWorkerProps> = ({ className = "" }) => {
 
           {/* Desk / Platform Surface */}
           <line
-            x1="14"
+            x1="12"
             y1="142"
-            x2="186"
+            x2="188"
             y2="142"
             stroke="#383A38"
             strokeWidth="3"
             strokeLinecap="round"
           />
 
-          {/* Robot Mascot Body (Solid bright fills: #FCF8D8, #D9DADF, #DD700B) */}
-          <g transform="translate(18, 12)">
+          {/* Robot Mascot Body */}
+          <g transform="translate(16, 12)">
             {/* Antenna */}
             <path d="M 52 32 L 38 14" stroke="#D9DADF" strokeWidth="3.5" strokeLinecap="round" />
-            <circle cx="35" cy="11" r="6" fill="#DD700B" />
+            <circle cx="35" cy="11" r="6.5" fill="#DD700B" />
             <circle cx="33" cy="9" r="2" fill="#FCF8D8" />
 
             {/* Left Ear */}
@@ -109,15 +109,16 @@ export const RobotWorker: React.FC<RobotWorkerProps> = ({ className = "" }) => {
               d="M 32 86 C 32 86 36 122 38 126 C 48 128 62 128 72 126 C 74 122 78 86 78 86 Z"
               fill="#D9DADF"
             />
-            {/* Chest Emblem */}
-            <rect x="45" y="92" width="20" height="14" rx="3" fill="#1E201E" />
-            <path
-              d="M 51 102 L 55 95 L 59 95 L 59 102 M 53 100 L 59 100"
-              stroke="#DD700B"
-              strokeWidth="1.2"
-              strokeLinecap="round"
-              fill="none"
-            />
+
+            {/* Chest Emblem with exact Geometric AH Monogram on Shirt */}
+            <rect x="43" y="90" width="26" height="17" rx="3.5" fill="#1E201E" stroke="#262826" strokeWidth="1" />
+            <g transform="translate(46, 92) scale(0.145)">
+              <path
+                d="M 10 70 L 75 16 L 98 16 L 98 42 L 118 42 L 118 16 L 138 2 L 138 70 L 118 70 L 118 56 L 98 56 L 98 70 L 56 70 L 70 56 L 98 56 L 98 42 L 42 42 Z"
+                fill="#DD700B"
+              />
+              <polygon points="56,42 82,24 82,42" fill="#1E201E" />
+            </g>
 
             {/* Hands typing on laptop keyboard */}
             <path
@@ -154,7 +155,7 @@ export const RobotWorker: React.FC<RobotWorkerProps> = ({ className = "" }) => {
               <path
                 d="M 18 15 L 48 18 L 43 51 L 13 49 Z"
                 fill="#1E201E"
-                filter="url(#robot-screen-glow)"
+                filter="url(#worker-screen-glow)"
               />
               {/* Lines of code / Rubric on screen */}
               <line x1="17" y1="22" x2="36" y2="24" stroke="#DD700B" strokeWidth="2.5" strokeLinecap="round" />

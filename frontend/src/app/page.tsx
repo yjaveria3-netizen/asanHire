@@ -67,10 +67,15 @@ export default function HomePage() {
         <div className="absolute top-[35%] right-[10%] w-[420px] h-[420px] rounded-full bg-[#FCF8D8]/4 blur-[160px]" />
       </div>
 
-      {/* Top Navigation Bar: 4 tabs on the LEFT, Logo on the RIGHT (No clickable buttons) */}
+      {/* Top Navigation Bar: Logo on the FAR LEFT, 4 Sub-Tabs on the RIGHT */}
       <header className="sticky top-0 z-50 backdrop-blur-md bg-[#1E201E]/90 border-b border-[#D9DADF]/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between gap-4">
-          {/* Left Side: 4 Core Recruiting Tabs */}
+          {/* Far Left: Noticeably Larger asanHire Logo */}
+          <div className="shrink-0">
+            <Logo variant="full" size="lg" href="/" priority />
+          </div>
+
+          {/* Far Right: 4 Core Recruiting Sub-Tabs */}
           <nav
             className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar py-2"
             aria-label="Recruiting sub-tabs"
@@ -103,29 +108,16 @@ export default function HomePage() {
               );
             })}
           </nav>
-
-          {/* Right Side: asanHire Logo only (No clickable buttons) */}
-          <div className="shrink-0 pl-2">
-            <Logo variant="full" size="md" href="/" priority />
-          </div>
         </div>
       </header>
 
       {/* Main Content */}
       <main className="relative z-10 flex-1 flex flex-col">
-        {/* Hero Section: Left = Tagline, Right = Action Buttons + Friendly Robot Mascot */}
+        {/* Hero Section: Left = Tagline + Guarantees + Bottom-Left Robot, Right = Action Buttons */}
         <section className="pt-12 sm:pt-16 pb-12 px-4 sm:px-6 max-w-7xl mx-auto w-full">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
-            {/* Left Column: Tagline & Plain-Language Copy */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
+            {/* Left Column: Tagline, Plain-Language Copy & Robot at Bottom-Left */}
             <div className="lg:col-span-7 flex flex-col items-start text-left">
-              {/* Trust Badge */}
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#262826] border border-[#DD700B]/30 mb-6">
-                <span className="w-2 h-2 rounded-full bg-[#DD700B] animate-pulse" />
-                <span className="text-xs font-medium text-[#D9DADF]">
-                  100% Human Final Decision Control &bull; Fair AI Scoring
-                </span>
-              </div>
-
               {/* Tagline with Load Animations */}
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-[#D9DADF] leading-[1.15]">
                 <span className="inline-block animate-slide-left text-[#D9DADF]">
@@ -156,14 +148,19 @@ export default function HomePage() {
                   <span>Advisory anti-cheat proctoring</span>
                 </div>
               </div>
+
+              {/* Robot with AH on its shirt: Kept in the bottom-left corner */}
+              <div className="mt-8 pt-4 flex items-center justify-start">
+                <RobotWorker />
+              </div>
             </div>
 
-            {/* Right Column: Action Buttons & Friendly Robot Worker on Laptop */}
-            <div className="lg:col-span-5 flex flex-col items-start sm:items-center lg:items-end gap-6">
+            {/* Right Column: Action Buttons */}
+            <div className="lg:col-span-5 flex flex-col items-start sm:items-center lg:items-end gap-6 pt-2">
               {/* Action Buttons Box */}
-              <div className="w-full max-w-md neu-raised p-6 rounded-2xl border border-[rgba(217,218,223,0.08)] flex flex-col gap-3.5">
-                <div className="text-xs font-mono uppercase tracking-wider text-[#8A8B82] mb-1">
-                  Start In Seconds
+              <div className="w-full max-w-md neu-raised p-6 rounded-2xl border border-[rgba(217,218,223,0.08)] flex flex-col gap-4">
+                <div className="text-xs font-mono uppercase tracking-wider text-[#8A8B82]">
+                  Recruiting Workspace
                 </div>
 
                 {/* Primary Action Button: Enter Recruiting Portal */}
@@ -189,15 +186,6 @@ export default function HomePage() {
                     <span>Launch Voice Screening</span>
                   </NeuButton>
                 </Link>
-
-                <p className="text-[11px] text-[#8A8B82] text-center mt-1">
-                  No credit card required &bull; Ready-to-test candidate room included
-                </p>
-              </div>
-
-              {/* Decorative Element: Small Friendly Robot Mascot on Laptop with Soft Drifting Dots */}
-              <div className="w-full max-w-md flex items-center justify-center pt-2">
-                <RobotWorker />
               </div>
             </div>
           </div>

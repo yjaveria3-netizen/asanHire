@@ -176,7 +176,7 @@ export default function PublicJobPage() {
       <div className="max-w-4xl mx-auto w-full flex flex-col gap-6">
         {/* Header */}
         <header className="flex items-center justify-between pb-4 border-b border-[#D9DADF]/10">
-          <Logo variant="full" size="md" href="/" priority />
+          <Logo variant="full" size="lg" href="/" priority />
           <span className="text-xs font-mono text-[#8A8B82]">Careers Portal</span>
         </header>
 

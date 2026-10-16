@@ -39,15 +39,15 @@
 
     <!-- Left Ear / Headphone -->
     <rect x="22" y="48" width="13" height="34" rx="6.5" fill="#1E201E" stroke="#DD700B" stroke-width="3" />
-    <rect x="25" y="54" width="7" height="22" rx="3.5" fill="#DD700B" opacity="0.75" />
+    <rect x="25" y="54" width="7" height="22" rx="3.5" fill="#DD700B" opacity="0.8" />
 
     <!-- Right Ear / Headphone -->
     <rect x="113" y="48" width="13" height="34" rx="6.5" fill="#1E201E" stroke="#DD700B" stroke-width="3" />
-    <rect x="116" y="54" width="7" height="22" rx="3.5" fill="#DD700B" opacity="0.75" />
+    <rect x="116" y="54" width="7" height="22" rx="3.5" fill="#DD700B" opacity="0.8" />
 
     <!-- Head Helmet Shell -->
-    <rect x="31" y="28" width="86" height="74" rx="37" fill="#D9DADF" stroke="#FCF8D8" stroke-width="2" />
-    <path d="M 42 39 Q 74 33 106 39" stroke="#FCF8D8" stroke-width="2.5" stroke-linecap="round" fill="none" opacity="0.9" />
+    <rect x="31" y="28" width="86" height="74" rx="37" fill="#FCF8D8" stroke="#D9DADF" stroke-width="2" />
+    <path d="M 42 39 Q 74 33 106 39" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" fill="none" opacity="0.9" />
 
     <!-- Visor (Face Screen) -->
     <rect x="42" y="42" width="64" height="46" rx="20" fill="#1E201E" stroke="#262826" stroke-width="1.5" />
@@ -60,20 +60,20 @@
     <path d="M 58 102 L 90 102 L 96 110 L 52 110 Z" fill="#DD700B" />
     <path d="M 44 110 C 44 110 49 146 51 152 C 63 155 85 155 97 152 C 99 146 104 110 104 110 Z" fill="#D9DADF" />
     
-    <!-- Chest Trim -->
-    <rect x="58" y="116" width="32" height="20" rx="4" fill="#1E201E" stroke="#262826" stroke-width="1" />
-    <path d="M 67 131 L 72 121 L 75 121 L 75 131 M 70 128 L 75 128 M 79 121 L 79 131 M 83 121 L 83 131 M 79 126 L 83 126" stroke="#DD700B" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+    <!-- Chest Trim with exact AH monogram -->
+    <rect x="56" y="115" width="36" height="22" rx="4" fill="#1E201E" stroke="#262826" stroke-width="1" />
+    <g transform="translate(60, 118) scale(0.18)">
+      <path d="M 10 70 L 75 16 L 98 16 L 98 42 L 118 42 L 118 16 L 138 2 L 138 70 L 118 70 L 118 56 L 98 56 L 98 70 L 56 70 L 70 56 L 98 56 L 98 42 L 42 42 Z" fill="#DD700B" />
+      <polygon points="56,42 82,24 82,42" fill="#1E201E" />
+    </g>
 
     <!-- Thumbs Up Hand -->
     <g transform="translate(104, 86)">
-      <!-- Radiating Sparks -->
-      <line x1="28" y1="2" x2="37" y2="-7" stroke="#DD700B" stroke-width="3" stroke-linecap="round" />
-      <line x1="33" y1="12" x2="44" y2="9" stroke="#DD700B" stroke-width="3" stroke-linecap="round" />
-      <line x1="29" y1="22" x2="40" y2="25" stroke="#DD700B" stroke-width="3" stroke-linecap="round" />
+      <line x1="28" y1="2" x2="38" y2="-8" stroke="#DD700B" stroke-width="3" stroke-linecap="round" />
+      <line x1="33" y1="12" x2="45" y2="9" stroke="#DD700B" stroke-width="3" stroke-linecap="round" />
+      <line x1="29" y1="22" x2="41" y2="25" stroke="#DD700B" stroke-width="3" stroke-linecap="round" />
 
-      <!-- Arm & Fist -->
       <path d="M 0 32 C 4 28 12 24 18 24 L 22 24 C 25 24 28 27 28 30 L 28 42 C 28 45 25 48 22 48 L 8 48" fill="#D9DADF" stroke="#262826" stroke-width="1.5" />
-      <!-- Thumb pointing up -->
       <path d="M 16 24 C 16 18 16 4 20 4 C 23 4 25 8 25 15 L 25 24 Z" fill="#FCF8D8" stroke="#262826" stroke-width="1.5" />
     </g>
   </g>

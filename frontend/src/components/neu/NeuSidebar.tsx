@@ -22,7 +22,7 @@ export const NeuSidebar: React.FC = () => {
         {/* Brand Logo Header: Full on md+, Mark on small screens / collapsed */}
         <div className="flex items-center justify-center md:justify-start px-1 md:px-3 py-4 mb-6">
           <div className="hidden md:block">
-            <Logo variant="full" size="md" href="/hr" priority />
+            <Logo variant="full" size="lg" href="/hr" priority />
           </div>
           <div className="block md:hidden">
             <Logo variant="mark" size="md" href="/hr" priority />
