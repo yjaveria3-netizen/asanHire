@@ -191,17 +191,41 @@ async def send_templated_email(
     context: Dict[str, Any],
     candidate_id: Optional[str] = None,
     sent_by: str = "system:scheduling_agent",
+    hr_sender_email: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Sends transactional email via Resend using a fixed template and writes email_log.
+    Dynamically uses the logged-in HR user's email for reply_to and sender attribution,
+    and routes testing emails to the HR user's inbox in non-production environments
+    when DEMO_EMAIL_OVERRIDE is not set.
     Never logs raw interview tokens.
     """
     rendered = render_email_template(template_type, context)
-    target_email = (
-        settings.DEMO_EMAIL_OVERRIDE.strip()
-        if settings.DEMO_EMAIL_OVERRIDE and settings.DEMO_EMAIL_OVERRIDE.strip()
-        else recipient_email
-    )
+
+    # 1. Target Recipient Resolution
+    # If DEMO_EMAIL_OVERRIDE is set, use it. Otherwise, if in non-production and
+    # hr_sender_email is provided, route directly to the logged-in HR's inbox.
+    target_email = recipient_email
+    if settings.DEMO_EMAIL_OVERRIDE and settings.DEMO_EMAIL_OVERRIDE.strip():
+        target_email = settings.DEMO_EMAIL_OVERRIDE.strip()
+    elif hr_sender_email and hr_sender_email.strip() and not settings.is_production:
+        target_email = hr_sender_email.strip()
+
+    # 2. Sender and Reply-To Resolution
+    base_from = (settings.RESEND_FROM or "asanHire <onboarding@resend.dev>").strip()
+    from_address = base_from
+    reply_to: Optional[str] = None
+
+    if hr_sender_email and "@" in hr_sender_email:
+        hr_clean = hr_sender_email.strip()
+        reply_to = hr_clean
+        # Format human-friendly display name, e.g. "Jane Doe via asanHire <onboarding@resend.dev>"
+        user_name = hr_clean.split("@")[0].replace(".", " ").title()
+        if "<" in base_from and ">" in base_from:
+            addr = base_from.split("<")[1].split(">")[0]
+            from_address = f"{user_name} via asanHire <{addr}>"
+        else:
+            from_address = f"{user_name} via asanHire <{base_from}>"
 
     provider_id: Optional[str] = None
     delivery_status = "sent"
@@ -212,21 +236,23 @@ async def send_templated_email(
             import resend
 
             resend.api_key = api_key
-            send_res = resend.Emails.send(
-                {
-                    "from": settings.RESEND_FROM,
-                    "to": [target_email],
-                    "subject": rendered["subject"],
-                    "html": rendered["html"],
-                    "text": rendered["text"],
-                }
-            )
+            email_payload: Dict[str, Any] = {
+                "from": from_address,
+                "to": [target_email],
+                "subject": rendered["subject"],
+                "html": rendered["html"],
+                "text": rendered["text"],
+            }
+            if reply_to:
+                email_payload["reply_to"] = reply_to
+
+            send_res = resend.Emails.send(email_payload)
             if isinstance(send_res, dict):
                 provider_id = send_res.get("id")
             else:
                 provider_id = getattr(send_res, "id", None)
         except Exception as e:
-            logger.warning(f"Resend delivery failed ({type(e).__name__}); recording in email_log.")
+            logger.warning(f"Resend delivery failed ({type(e).__name__}): {e}; recording in email_log.")
             delivery_status = "failed"
     else:
         provider_id = f"sim_{template_type}"

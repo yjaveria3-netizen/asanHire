@@ -159,24 +159,14 @@ async def run_matcher_for_candidate(
             resume_text=resume_text,
             min_score=min_score,
         )
-        match_dict = {
-            "overall_score": int(round(result.overall_score)),
-            "criteria_scores": [cs.model_dump() for cs in result.criteria_scores],
-            "strengths": result.strengths,
-            "gaps": result.gaps,
-            "missing_must_have": result.missing_must_have,
-            "shortlist_recommended": result.shortlist_recommended,
-            "injection_suspected": result.injection_suspected,
-        }
-
-        client.table("candidates").update(
+        from app.mcp_server import call_mcp_tool
+        await call_mcp_tool(
+            "save_score",
             {
-                "match": match_dict,
-                "ai_score": int(round(result.overall_score)),
-                "injection_suspected": result.injection_suspected,
-                "status": "applied",
-            }
-        ).eq("id", candidate_id).execute()
+                "candidate_id": candidate_id,
+                "score_json": result.model_dump(),
+            },
+        )
 
         await log_agent_run(
             agent="matcher",

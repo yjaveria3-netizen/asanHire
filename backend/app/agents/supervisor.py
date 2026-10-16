@@ -64,25 +64,34 @@ async def run_supervisor_for_candidate(
     interview_id: Optional[str] = None,
 ) -> Optional[Dict[str, Any]]:
     """
-    Background task that loads candidate, job rubric, interview transcript/scores,
-    and proctor_events, runs the Supervisor Agent, saves to public.reports,
-    and writes an agent_runs row (agent='supervisor').
+    Background task that loads candidate (via MCP get_candidate), job rubric
+    (via MCP get_job_rubric), interview transcript/scores, and proctor trust_score
+    (via MCP get_trust_score), runs the Supervisor Agent, saves to public.reports
+    (via MCP save_report), and writes an agent_runs row (agent='supervisor').
     """
+    from app.mcp_server import call_mcp_tool
+
     client = get_supabase_service_client()
     job_id: Optional[str] = None
 
     try:
-        cand_res = client.table("candidates").select("*").eq("id", candidate_id).execute()
-        if not cand_res.data:
+        try:
+            cand_info = await call_mcp_tool("get_candidate", {"candidate_id": candidate_id})
+        except Exception:
             return None
-        cand_row = cand_res.data[0]
-        job_id = str(cand_row.get("job_id")) if cand_row.get("job_id") else None
+        if not cand_info:
+            return None
+
+        job_id = str(cand_info.get("job_id")) if cand_info.get("job_id") else None
 
         rubric: Dict[str, Any] = {}
         if job_id:
-            job_res = client.table("jobs").select("rubric").eq("id", job_id).execute()
-            if job_res.data and isinstance(job_res.data[0].get("rubric"), dict):
-                rubric = job_res.data[0]["rubric"]
+            try:
+                job_info = await call_mcp_tool("get_job_rubric", {"job_id": job_id})
+                if isinstance(job_info, dict) and isinstance(job_info.get("rubric"), dict):
+                    rubric = job_info["rubric"]
+            except Exception:
+                pass
 
         if interview_id:
             int_res = client.table("interviews").select("*").eq("id", interview_id).execute()
@@ -100,73 +109,34 @@ async def run_supervisor_for_candidate(
         resolved_interview_id = str(int_row.get("id")) if int_row.get("id") else interview_id
         transcript = int_row.get("transcript") if isinstance(int_row.get("transcript"), list) else []
         scores = int_row.get("scores") if isinstance(int_row.get("scores"), list) else []
-        trust_score = int(int_row.get("trust_score", 100))
 
-        event_counts: Dict[str, int] = {}
-        if resolved_interview_id:
-            ev_res = (
-                client.table("proctor_events")
-                .select("type")
-                .eq("interview_id", resolved_interview_id)
-                .execute()
-            )
-            counts = Counter(e.get("type") for e in (ev_res.data or []) if e.get("type"))
-            event_counts = dict(counts)
-
-        proctor_summary = {
-            "trust_score": trust_score,
-            "event_counts": event_counts,
+        proctor_summary: Dict[str, Any] = {
+            "trust_score": int(int_row.get("trust_score", 100)),
+            "event_counts": {},
         }
+        if resolved_interview_id:
+            trust_info = await call_mcp_tool("get_trust_score", {"interview_id": resolved_interview_id})
+            if isinstance(trust_info, dict):
+                proctor_summary = {
+                    "trust_score": int(trust_info.get("trust_score", 100)),
+                    "event_counts": trust_info.get("event_counts") or {},
+                }
 
         report_out = await generate_evaluation_report(
             rubric=rubric,
-            match_data=cand_row.get("match") if isinstance(cand_row.get("match"), dict) else {},
+            match_data=cand_info.get("match") if isinstance(cand_info.get("match"), dict) else {},
             transcript=transcript,
             scores=scores,
             proctor_summary=proctor_summary,
         )
 
-        # Determine next version number for candidate's reports
-        existing_reports = (
-            client.table("reports")
-            .select("version")
-            .eq("candidate_id", candidate_id)
-            .order("version", desc=True)
-            .limit(1)
-            .execute()
+        saved_report = await call_mcp_tool(
+            "save_report",
+            {
+                "candidate_id": candidate_id,
+                "report_json": report_out.model_dump(),
+            },
         )
-        next_version = 1
-        if existing_reports.data:
-            next_version = int(existing_reports.data[0].get("version", 0)) + 1
-
-        summary_payload = {
-            "summary": report_out.summary,
-            "interview_score": int(round(report_out.interview_score or 0)),
-            "strengths": report_out.strengths,
-            "weaknesses": report_out.weaknesses,
-            "evidence": [e.model_dump() for e in report_out.evidence],
-            "proctoring_note": report_out.proctoring_note,
-            "recommendation": report_out.recommendation.lower(),
-            "recommendation_reason": report_out.recommendation_reason,
-            "hr_should_verify": report_out.hr_should_verify,
-            "injection_suspected": report_out.injection_suspected,
-        }
-
-        rec = report_out.recommendation.lower()
-        if rec not in {"advance", "hold", "reject"}:
-            rec = {"hire": "advance", "reject": "reject", "hold": "hold"}.get(rec, "hold")
-
-        report_row = {
-            "candidate_id": candidate_id,
-            "version": next_version,
-            "summary": summary_payload,
-            "interview_score": int(round(report_out.interview_score or 0)),
-            "recommendation": rec,
-        }
-        saved = client.table("reports").insert(report_row).execute()
-
-        if report_out.injection_suspected:
-            client.table("candidates").update({"injection_suspected": True}).eq("id", candidate_id).execute()
 
         await log_agent_run(
             agent="supervisor",
@@ -175,7 +145,7 @@ async def run_supervisor_for_candidate(
             status="success",
             provider="gemini",
         )
-        return saved.data[0] if saved.data else report_row
+        return saved_report
 
     except Exception as e:
         logger.error(f"Supervisor Agent failed for candidate {candidate_id}: {type(e).__name__}")

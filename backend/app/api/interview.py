@@ -9,6 +9,7 @@ from app.core.llm import log_agent_run
 from app.core.rate_limit import rate_limit_interview
 from app.services.tokens import hash_token
 from app.agents.interview import run_interview_turn
+from app.agents.guardian import record_proctor_event
 from app.agents.supervisor import run_supervisor_for_candidate
 from app.models.schemas import (
     InterviewVerifyResponse,
@@ -394,14 +395,47 @@ async def finish_interview_session(
 
 
 @router.post(
+    "/{token}/event",
+    response_model=GuardianEventResponse,
+    dependencies=[Depends(rate_limit_interview)],
+    summary="Report proctoring telemetry event and recompute trust_score",
+)
+@router.post(
     "/{token}/guardian-event",
     response_model=GuardianEventResponse,
     dependencies=[Depends(rate_limit_interview)],
-    summary="Report proctoring telemetry infraction",
+    include_in_schema=False,
 )
 async def record_guardian_event(token: str, event: GuardianEventRequest, request: Request):
-    """Stub for proctoring event logging."""
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="TODO M2: Record event in proctoring_events and update candidate trust score",
+    """
+    Validates proctor event type against the allowlist, stores in proctor_events,
+    recomputes trust_score = max(0, 100 - sum of penalties) with repeats of each
+    type capped at 5 counted events, writes agent_runs (agent='guardian') only for
+    the first event of each type, and returns {trust_score}.
+    Never modifies candidate status.
+    """
+    client = get_supabase_service_client()
+    interview = _lookup_valid_interview(client, token)
+    interview_id = str(interview["id"])
+    candidate_id = str(interview["candidate_id"])
+
+    try:
+        clean_type, clean_detail = event.get_validated_event()
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Invalid request payload",
+        )
+
+    candidate, job = _load_candidate_and_job(client, candidate_id)
+    job_id = str(job.get("id")) if job.get("id") else None
+
+    new_trust_score = await record_proctor_event(
+        interview_id=interview_id,
+        candidate_id=candidate_id,
+        job_id=job_id,
+        event_type=clean_type,
+        detail=clean_detail,
     )
+
+    return GuardianEventResponse(trust_score=new_trust_score)

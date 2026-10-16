@@ -355,3 +355,44 @@ def test_finish_interview_marks_interviewed_and_triggers_supervisor():
     with patch("app.api.interview.get_supabase_service_client", return_value=fake_db):
         second_resp = client.post(f"/interview/{raw_token}/finish")
         assert second_resp.status_code == 404
+
+
+def test_proctor_event_allowlist_penalties_cap_and_first_per_type_agent_run():
+    raw_token = "guardian-token-123"
+    store = _make_store(raw_token, status="in_progress")
+    fake_db = FakeSupabaseClient(store)
+
+    with patch("app.api.interview.get_supabase_service_client", return_value=fake_db), \
+         patch("app.agents.guardian.get_supabase_service_client", return_value=fake_db), \
+         patch("app.core.llm.get_supabase_service_client", return_value=fake_db):
+
+        # 1. Reject invalid event type outside allowlist
+        bad_resp = client.post(f"/interview/{raw_token}/event", json={"type": "devtools_open"})
+        assert bad_resp.status_code == 422
+
+        # 2. First 'tab_hidden' (-8 -> 92) logs 1 guardian agent_run
+        r1 = client.post(f"/interview/{raw_token}/event", json={"type": "tab_hidden", "detail": "hid tab 1.4s"})
+        assert r1.status_code == 200
+        assert r1.json() == {"trust_score": 92}
+        assert len(store["agent_runs"]) == 1
+        assert store["agent_runs"][0]["agent"] == "guardian"
+
+        # 3. 6 more 'tab_hidden' events (total 7) -> capped at 5 counted events (5 * 8 = 40 -> trust_score = 60)
+        # And NO additional agent_runs for 'tab_hidden'
+        for _ in range(6):
+            limiter._storage.reset()
+            r_rep = client.post(f"/interview/{raw_token}/event", json={"type": "tab_hidden"})
+        assert r_rep.status_code == 200
+        assert r_rep.json() == {"trust_score": 60}
+        assert len(store["agent_runs"]) == 1
+
+        # 4. First 'paste' event (-10 -> 50) logs a second guardian agent_run (first of new type)
+        r_paste = client.post(f"/interview/{raw_token}/event", json={"type": "paste"})
+        assert r_paste.status_code == 200
+        assert r_paste.json() == {"trust_score": 50}
+        assert len(store["agent_runs"]) == 2
+        assert store["interviews"][0]["trust_score"] == 50
+
+        # 5. Candidate status must remain untouched ('invited')
+        assert store["candidates"][0]["status"] == "invited"
+
