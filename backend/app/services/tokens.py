@@ -3,16 +3,20 @@ import hashlib
 import secrets
 from app.core.config import settings
 
-def generate_raw_token() -> str:
+def generate_token() -> str:
     """Generates a cryptographically secure 32-byte URL-safe string."""
     return secrets.token_urlsafe(32)
 
-def hash_token(raw_token: str) -> str:
-    """Computes SHA-256 hash of raw_token salted with INTERVIEW_TOKEN_SALT."""
-    salted = f"{raw_token}{settings.INTERVIEW_TOKEN_SALT}".encode("utf-8")
-    return hashlib.sha256(salted).hexdigest()
+# Alias for backwards compatibility
+generate_raw_token = generate_token
 
-def verify_token_hash(raw_token: str, expected_hash: str) -> bool:
-    """Performs constant-time comparison of token hashes to prevent timing attacks."""
-    actual_hash = hash_token(raw_token)
-    return hmac.compare_digest(actual_hash, expected_hash)
+def hash_token(token: str) -> str:
+    """Computes HMAC-SHA256 of token keyed with INTERVIEW_TOKEN_SALT as a hex digest."""
+    key = settings.INTERVIEW_TOKEN_SALT.encode("utf-8")
+    msg = token.encode("utf-8")
+    return hmac.new(key, msg, hashlib.sha256).hexdigest()
+
+def verify_token_hash(token: str, stored_hash: str) -> bool:
+    """Performs constant-time comparison of HMAC-SHA256 hashes to prevent timing attacks."""
+    actual_hash = hash_token(token)
+    return hmac.compare_digest(actual_hash, stored_hash)
