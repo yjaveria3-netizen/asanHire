@@ -59,19 +59,30 @@ export const GuardianSidebar: React.FC<GuardianSidebarProps> = ({
         </div>
         <div className="flex items-center justify-between p-2 rounded-lg bg-[#242724]">
           <span className="flex items-center gap-2 text-[#D9DADF]">
-            <Copy className="w-3.5 h-3.5 text-[#8A8B82]" /> Paste Interception
+            <Copy className="w-3.5 h-3.5 text-[#8A8B82]" /> Paste / Copy Guard
           </span>
           <span className="text-[11px] font-mono text-[#8FD19E]">Guarded</span>
         </div>
       </div>
 
+      {/* Calm Advisory Notice */}
+      <div className="p-3 rounded-xl bg-[#202320] border border-[#8A8B82]/15 text-xs text-[#8A8B82] leading-relaxed">
+        <p className="font-semibold text-[#D9DADF] mb-1 text-[11px] uppercase tracking-wide">
+          Proctor Guidance
+        </p>
+        <p>
+          Please stay in fullscreen mode. Avoid switching tabs, minimizing your window, or copying external text.
+        </p>
+      </div>
+
       {/* Recent Infractions Log */}
       <div className="flex flex-col gap-2 pt-2 border-t border-[#8A8B82]/20">
-        <span className="text-[11px] uppercase tracking-wider text-[#8A8B82] font-semibold">
-          Proctoring Telemetry Log
+        <span className="text-[11px] uppercase tracking-wider text-[#8A8B82] font-semibold flex items-center justify-between">
+          <span>Recent Warnings</span>
+          <span className="text-[10px] text-[#8A8B82]/70 font-normal">Advisory only</span>
         </span>
         {recentEvents.length === 0 ? (
-          <p className="text-xs text-[#8A8B82] italic">Zero infractions recorded. High integrity session.</p>
+          <p className="text-xs text-[#8FD19E]/90 italic">Zero infractions recorded. High integrity session.</p>
         ) : (
           <div className="flex flex-col gap-1.5 max-h-40 overflow-y-auto">
             {recentEvents.map((evt, idx) => (
@@ -83,7 +94,10 @@ export const GuardianSidebar: React.FC<GuardianSidebarProps> = ({
                   <AlertTriangle className="w-3 h-3 shrink-0" />
                   <span className="truncate capitalize">{evt.type.replace("_", " ")}</span>
                 </div>
-                <span className="text-[10px] font-mono text-[#E57373]">-{evt.penalty} pts</span>
+                <div className="flex items-center gap-2 text-[10px] font-mono text-[#8A8B82]">
+                  <span>{evt.timestamp}</span>
+                  <span className="text-[#E57373]">-{evt.penalty}</span>
+                </div>
               </div>
             ))}
           </div>
