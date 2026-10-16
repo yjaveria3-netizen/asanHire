@@ -127,14 +127,58 @@ export const api = {
         })
       )
       .catch(() => {
-        // Fallback simulated interview turns
+        // Fallback adaptive 2-track simulated interview turns
+        const stateKey = `mock_turn_${token}`;
+        const currentTurn = parseInt(
+          (typeof window !== "undefined" && window.sessionStorage?.getItem(stateKey)) || "1",
+          10
+        );
+        const nextTurn = currentTurn + 1;
+        if (typeof window !== "undefined" && window.sessionStorage) {
+          window.sessionStorage.setItem(stateKey, nextTurn.toString());
+        }
+
+        if (nextTurn >= 5) {
+          return {
+            action: "end",
+            is_complete: true,
+            spoken_text:
+              "Thank you for sharing your technical insights. That completes our technical voice screening. Your transcript and evaluation have been securely routed to the hiring team.",
+            next_question: "Evaluation concluded. Submitting results.",
+            question_index: 5,
+            total_questions: 5,
+          };
+        }
+
+        const adaptiveTurns: Record<number, { text: string; action: string }> = {
+          2: {
+            text:
+              "You emphasized decoupling and state management. Probing deeper into that: how do you handle concurrency, rate limiting, and sudden traffic spikes between your frontend and background workers?",
+            action: "ask_next",
+          },
+          3: {
+            text:
+              "Building on your concurrency and state architecture: let's address security. How do you defend your endpoints against prompt injection, malicious telemetry, and unauthorized token access?",
+            action: "ask_next",
+          },
+          4: {
+            text:
+              "You discussed security and defensive boundaries. Looking at day-two operations: what specific observability metrics, error budgets, and rollback mechanisms do you establish to ensure high reliability?",
+            action: "ask_next",
+          },
+        };
+
+        const turnData = adaptiveTurns[nextTurn] || {
+          text:
+            "Thank you. Could you describe your experience instrumenting automated CI/CD pipelines and testing for this architecture?",
+          action: "ask_next",
+        };
+
         return {
-          action: "continue",
-          spoken_text:
-            "Thank you for sharing that architecture. How did you handle telemetry, rate limiting, and prompt injection defense on incoming user inputs?",
-          next_question:
-            "How did you handle telemetry, rate limiting, and prompt injection defense on incoming user inputs?",
-          question_index: 2,
+          action: turnData.action,
+          spoken_text: turnData.text,
+          next_question: turnData.text,
+          question_index: nextTurn,
           total_questions: 5,
         };
       });

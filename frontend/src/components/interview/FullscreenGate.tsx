@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
-import { Maximize2, Mic, ShieldCheck, Eye, Copy, AlertCircle, Lock, CheckCircle2 } from "lucide-react";
+import { Maximize2, Mic, Camera, ShieldCheck, Eye, Copy, AlertCircle, Lock, CheckCircle2 } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { NeuButton } from "@/components/neu/NeuButton";
 import { MicCheckModal } from "@/components/interview/MicCheckModal";
+import { CameraCheckModal } from "@/components/interview/CameraCheckModal";
 
 interface FullscreenGateProps {
   onEnterFullscreen: () => void;
@@ -21,15 +22,19 @@ export const FullscreenGate: React.FC<FullscreenGateProps> = ({
   const [requesting, setRequesting] = useState<boolean>(false);
   const [isMicCheckOpen, setIsMicCheckOpen] = useState<boolean>(false);
   const [micVerified, setMicVerified] = useState<boolean>(false);
+  const [isCameraCheckOpen, setIsCameraCheckOpen] = useState<boolean>(false);
+  const [cameraVerified, setCameraVerified] = useState<boolean>(false);
 
   const requestPermissionsAndEnter = async () => {
     if (!consentChecked) return;
     setRequesting(true);
     try {
       if (navigator?.mediaDevices?.getUserMedia) {
-        await navigator.mediaDevices.getUserMedia({ audio: true }).catch(() => {
-          // Graceful fallback if mic permission is denied or non-essential
-        });
+        await navigator.mediaDevices
+          .getUserMedia({ audio: true, video: { width: 320, height: 240 } })
+          .catch(() => {
+            // Graceful fallback if user previously granted or device is constrained
+          });
       }
       
       if (document?.documentElement?.requestFullscreen) {
@@ -85,6 +90,11 @@ export const FullscreenGate: React.FC<FullscreenGateProps> = ({
 
           <div className="flex items-start gap-2.5 text-[#D9DADF]/90">
             <span className="w-1.5 h-1.5 rounded-full bg-[#DD700B] mt-1.5 shrink-0" />
+            <span><strong>Camera Presence Verification:</strong> In-browser edge AI checks face centering and presence. Zero video frames are ever recorded or transmitted to servers.</span>
+          </div>
+
+          <div className="flex items-start gap-2.5 text-[#D9DADF]/90">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#DD700B] mt-1.5 shrink-0" />
             <span><strong>Clipboard Activity:</strong> Paste and copy operations on the interview interface are recorded.</span>
           </div>
 
@@ -92,52 +102,98 @@ export const FullscreenGate: React.FC<FullscreenGateProps> = ({
           <div className="mt-2 p-3 rounded-lg bg-[rgba(62,90,68,0.2)] border border-[#8FD19E]/30 flex items-start gap-2.5 text-[#8FD19E]">
             <ShieldCheck className="w-4 h-4 shrink-0 mt-0.5" />
             <p className="text-[11px] leading-relaxed">
-              <strong>Privacy Assurance:</strong> No video or audio recordings are permanently stored on our servers. Your voice responses are processed in-memory for evaluation.
+              <strong>Privacy Assurance:</strong> Zero video or audio recordings are stored on our servers. Processing occurs locally in-browser and in-memory.
             </p>
           </div>
         </div>
 
-        {/* Hardware & Microphone Pre-Check Row */}
-        <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#202320] border border-[#383A38] text-left">
-          <div className="flex items-center gap-3 text-xs">
-            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-              micVerified
-                ? "bg-[#8FD19E]/15 border border-[#8FD19E]/30 text-[#8FD19E]"
-                : "bg-[#DD700B]/15 border border-[#DD700B]/30 text-[#DD700B]"
-            }`}>
-              <Mic className="w-4 h-4" />
+        {/* Hardware Pre-Checks: Microphone & Camera */}
+        <div className="flex flex-col gap-2.5">
+          {/* Microphone Pre-Check Row */}
+          <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#202320] border border-[#383A38] text-left">
+            <div className="flex items-center gap-3 text-xs">
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                micVerified
+                  ? "bg-[#8FD19E]/15 border border-[#8FD19E]/30 text-[#8FD19E]"
+                  : "bg-[#DD700B]/15 border border-[#DD700B]/30 text-[#DD700B]"
+              }`}>
+                <Mic className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="font-semibold text-[#D9DADF]">Microphone &amp; Audio Check</p>
+                <p className="text-[11px] text-[#8A8B82]">
+                  {micVerified
+                    ? "Audio verified! You are loud and clear ✓"
+                    : "Check that your microphone is working and audible"}
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="font-semibold text-[#D9DADF]">Microphone &amp; Audio Check</p>
-              <p className="text-[11px] text-[#8A8B82]">
-                {micVerified
-                  ? "Audio verified! You are loud and clear ✓"
-                  : "Check that your microphone is working and audible"}
-              </p>
-            </div>
+
+            <NeuButton
+              type="button"
+              size="sm"
+              variant={micVerified ? "secondary" : "ghost"}
+              onClick={() => setIsMicCheckOpen(true)}
+              className={`text-xs shrink-0 flex items-center gap-1.5 ${
+                micVerified
+                  ? "border border-[#8FD19E]/40 text-[#8FD19E]"
+                  : "border border-[#DD700B]/40 text-[#DD700B] hover:bg-[#DD700B]/10"
+              }`}
+            >
+              {micVerified ? (
+                <>
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[#8FD19E]" /> Verified
+                </>
+              ) : (
+                <>
+                  <Mic className="w-3.5 h-3.5 text-[#DD700B]" /> Check Mic
+                </>
+              )}
+            </NeuButton>
           </div>
 
-          <NeuButton
-            type="button"
-            size="sm"
-            variant={micVerified ? "secondary" : "ghost"}
-            onClick={() => setIsMicCheckOpen(true)}
-            className={`text-xs shrink-0 flex items-center gap-1.5 ${
-              micVerified
-                ? "border border-[#8FD19E]/40 text-[#8FD19E]"
-                : "border border-[#DD700B]/40 text-[#DD700B] hover:bg-[#DD700B]/10"
-            }`}
-          >
-            {micVerified ? (
-              <>
-                <CheckCircle2 className="w-3.5 h-3.5 text-[#8FD19E]" /> Verified
-              </>
-            ) : (
-              <>
-                <Mic className="w-3.5 h-3.5 text-[#DD700B]" /> Check Mic
-              </>
-            )}
-          </NeuButton>
+          {/* Camera Pre-Check Row */}
+          <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#202320] border border-[#383A38] text-left">
+            <div className="flex items-center gap-3 text-xs">
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                cameraVerified
+                  ? "bg-[#8FD19E]/15 border border-[#8FD19E]/30 text-[#8FD19E]"
+                  : "bg-[#DD700B]/15 border border-[#DD700B]/30 text-[#DD700B]"
+              }`}>
+                <Camera className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="font-semibold text-[#D9DADF]">Camera &amp; Vision Check</p>
+                <p className="text-[11px] text-[#8A8B82]">
+                  {cameraVerified
+                    ? "Camera verified! Face centered and clear ✓"
+                    : "Verify your camera feed and framing before entering"}
+                </p>
+              </div>
+            </div>
+
+            <NeuButton
+              type="button"
+              size="sm"
+              variant={cameraVerified ? "secondary" : "ghost"}
+              onClick={() => setIsCameraCheckOpen(true)}
+              className={`text-xs shrink-0 flex items-center gap-1.5 ${
+                cameraVerified
+                  ? "border border-[#8FD19E]/40 text-[#8FD19E]"
+                  : "border border-[#DD700B]/40 text-[#DD700B] hover:bg-[#DD700B]/10"
+              }`}
+            >
+              {cameraVerified ? (
+                <>
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[#8FD19E]" /> Verified
+                </>
+              ) : (
+                <>
+                  <Camera className="w-3.5 h-3.5 text-[#DD700B]" /> Check Camera
+                </>
+              )}
+            </NeuButton>
+          </div>
         </div>
 
         {/* Consent Checkbox */}
@@ -177,6 +233,13 @@ export const FullscreenGate: React.FC<FullscreenGateProps> = ({
           isOpen={isMicCheckOpen}
           onClose={() => setIsMicCheckOpen(false)}
           onVerified={() => setMicVerified(true)}
+        />
+
+        {/* Interactive Camera Check Modal */}
+        <CameraCheckModal
+          isOpen={isCameraCheckOpen}
+          onClose={() => setIsCameraCheckOpen(false)}
+          onVerified={() => setCameraVerified(true)}
         />
       </div>
     </div>

@@ -120,7 +120,12 @@ def render_email_template(template_type: str, context: Dict[str, Any]) -> Dict[s
     if template_type not in TEMPLATES:
         template_type = "on_hold"
 
-    frontend_base = getattr(settings, "FRONTEND_URL", "http://localhost:3000").rstrip("/")
+    raw_frontend = getattr(settings, "FRONTEND_URL", "https://asan-hire.vercel.app")
+    frontend_base = (
+        raw_frontend
+        if raw_frontend and "localhost" not in raw_frontend
+        else "https://asan-hire.vercel.app"
+    ).rstrip("/")
     default_context = {
         "candidate_name": "Candidate",
         "job_title": "Position",

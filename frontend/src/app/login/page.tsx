@@ -105,10 +105,17 @@ export default function LoginPage() {
 
     try {
       const supabase = createClient();
+      const redirectOrigin =
+        typeof window !== "undefined" && window.location.origin
+          ? window.location.origin
+          : (process.env.NEXT_PUBLIC_APP_URL || "https://asan-hire.vercel.app");
+      const redirectUrl = `${redirectOrigin}/auth/callback?next=/hr`;
+
       const { data, error } = await supabase.auth.signUp({
         email: trimmedEmail,
         password,
         options: {
+          emailRedirectTo: redirectUrl,
           data: {
             full_name: trimmedName,
           },
