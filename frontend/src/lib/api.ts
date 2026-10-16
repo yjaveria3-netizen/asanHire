@@ -38,15 +38,25 @@ export const api = {
   },
 
   applyToJob: async (jobId: string, formData: FormData) => {
-    try {
-      const res = await fetch(`${API_BASE}/api/public/jobs/${jobId}/apply`, {
+    // Submit to /public/apply or /api/public/jobs/{job_id}/apply
+    let res = await fetch(`${API_BASE}/public/apply`, {
+      method: "POST",
+      body: formData,
+    }).catch(() => null);
+
+    if (!res || !res.ok) {
+      // Fallback to /api/public/jobs/{job_id}/apply if /public/apply is not available
+      res = await fetch(`${API_BASE}/api/public/jobs/${jobId}/apply`, {
         method: "POST",
         body: formData,
       });
-      return await res.json();
-    } catch {
-      return { candidate_id: "demo-id", status: "applied", message: "Application submitted (mock)." };
     }
+
+    if (!res.ok) {
+      throw new Error("Application submission failed.");
+    }
+
+    return await res.json();
   },
 
   applyJob: async (jobId: string, formData: FormData) => {
