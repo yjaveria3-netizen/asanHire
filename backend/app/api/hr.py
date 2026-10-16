@@ -1,9 +1,10 @@
 import logging
 from typing import List, Optional, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Body, Depends, HTTPException, status
 from app.core.security import get_hr_user, HRUser, assert_job_owner
 from app.core.db import get_supabase_service_client
 from app.agents.rubric import run_rubric_for_job
+from app.agents.scheduling import schedule_job, invite_candidate_with_token
 from app.services.audit import write_audit_log
 from app.models.schemas import (
     JobCreateRequest,
@@ -43,6 +44,7 @@ def _row_to_job_detail(row: Dict[str, Any], message: Optional[str] = None) -> Jo
         auto_invite=bool(row.get("auto_invite", True)),
         deadline=row["deadline"],
         status=row.get("status", "open"),
+        scheduler_ran_at=row.get("scheduler_ran_at"),
         created_at=row.get("created_at"),
         updated_at=row.get("updated_at"),
         message=message,
@@ -144,6 +146,28 @@ async def get_job_detail(
     """Returns single job requisition details and rubric (ownership checked)."""
     job_row = await assert_job_owner(job_id=job_id, user_id=current_user.id)
     return _row_to_job_detail(job_row)
+
+
+@router.post("/jobs/{job_id}/run-scheduler", summary="Manually run Scheduling Agent for a job")
+async def run_job_scheduler(
+    job_id: str,
+    current_user: HRUser = Depends(get_hr_user),
+) -> Dict[str, Any]:
+    """
+    HR-only endpoint that verifies job ownership via assert_job_owner,
+    executes deterministic schedule_job(job_id), and writes audit_log.
+    """
+    await assert_job_owner(job_id=job_id, user_id=current_user.id)
+    result = await schedule_job(job_id)
+
+    write_audit_log(
+        owner_id=current_user.id,
+        actor=current_user.id,
+        action="run_scheduler",
+        job_id=job_id,
+        reason="Manual scheduler run triggered by HR",
+    )
+    return result
 
 
 # ============================================================================
@@ -251,25 +275,83 @@ async def override_candidate_score(
 @router.post("/candidates/{candidate_id}/invite", summary="Manual interview invitation / resend")
 async def invite_candidate(
     candidate_id: str,
-    payload: InviteRequest,
+    payload: Optional[InviteRequest] = Body(default=None),
     current_user: HRUser = Depends(get_hr_user),
-):
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Not implemented",
+) -> Dict[str, Any]:
+    """
+    Manual interview invitation (works for any candidate; also supports resending
+    with a fresh token by voiding any previous interview token).
+    Verifies ownership via assert_job_owner and writes audit_log + email_log.
+    """
+    client = get_supabase_service_client()
+    cand_res = client.table("candidates").select("*").eq("id", candidate_id).execute()
+    if not cand_res or not cand_res.data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Candidate not found",
+        )
+    candidate = cand_res.data[0]
+    job_id = str(candidate.get("job_id") or "")
+    job_row = await assert_job_owner(job_id=job_id, user_id=current_user.id)
+
+    send_email = payload.send_email if payload is not None else True
+    reason = (payload.reason if (payload and payload.reason) else "Manual invite by HR")
+
+    return await invite_candidate_with_token(
+        candidate=candidate,
+        job=job_row,
+        actor=current_user.id,
+        reason=reason,
+        send_email=send_email,
     )
 
 
 @router.post("/candidates/{candidate_id}/cancel-invite", summary="Revoke active interview invitation")
 async def cancel_candidate_invite(
     candidate_id: str,
-    payload: CancelInviteRequest,
+    payload: Optional[CancelInviteRequest] = Body(default=None),
     current_user: HRUser = Depends(get_hr_user),
-):
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Not implemented",
+) -> Dict[str, Any]:
+    """
+    Invalidates active interview token(s) for the candidate (voided=True),
+    sets candidate status back to 'shortlisted', verifies ownership via assert_job_owner,
+    and writes audit_log.
+    """
+    client = get_supabase_service_client()
+    cand_res = client.table("candidates").select("*").eq("id", candidate_id).execute()
+    if not cand_res or not cand_res.data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Candidate not found",
+        )
+    candidate = cand_res.data[0]
+    job_id = str(candidate.get("job_id") or "")
+    await assert_job_owner(job_id=job_id, user_id=current_user.id)
+
+    previous_status = str(candidate.get("status") or "invited")
+    reason = (payload.reason if (payload and payload.reason) else "Invite cancelled by HR")
+
+    # Void all interview tokens for this candidate
+    client.table("interviews").update({"voided": True}).eq("candidate_id", candidate_id).execute()
+
+    # Revert candidate status to 'shortlisted'
+    client.table("candidates").update({"status": "shortlisted"}).eq("id", candidate_id).execute()
+
+    write_audit_log(
+        owner_id=current_user.id,
+        actor=current_user.id,
+        action="invite_cancelled",
+        job_id=job_id,
+        candidate_id=candidate_id,
+        from_status=previous_status,
+        to_status="shortlisted",
+        reason=reason,
     )
+
+    return {
+        "candidate_id": candidate_id,
+        "status": "shortlisted",
+    }
 
 
 @router.post("/candidates/{candidate_id}/allow-retry", summary="Allow interview retry")

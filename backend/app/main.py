@@ -129,10 +129,11 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type"],
 )
 
-# Include Routers (mounted at both /hr, /public and /api/hr, /api/public)
+# Include Routers (mounted at both /hr, /public, /interview and /api/*)
 app.include_router(public.router, prefix="/public")
 app.include_router(public.router, prefix="/api/public")
-app.include_router(interview.router)
+app.include_router(interview.router, prefix="/interview")
+app.include_router(interview.router, prefix="/api/interview")
 app.include_router(hr.router, prefix="/hr")
 app.include_router(hr.router, prefix="/api/hr")
 
