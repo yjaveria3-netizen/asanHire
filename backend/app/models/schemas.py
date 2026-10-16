@@ -289,16 +289,46 @@ class InterviewAnswerResponse(BaseModel):
 InterviewTurnResponse = InterviewAnswerResponse
 
 
+_ALLOWED_PROCTOR_EVENTS = {
+    "tab_hidden",
+    "window_blur",
+    "fullscreen_exit",
+    "paste",
+    "copy",
+    "no_face",
+    "multiple_faces",
+}
+
+
 class GuardianEventRequest(BaseModel):
-    event_type: str = Field(..., pattern="^(tab_hidden|window_blur|fullscreen_exit|paste|copy|no_face|multiple_faces)$")
-    payload: Dict[str, Any] = Field(default_factory=dict)
-    client_timestamp: datetime
+    type: Optional[str] = None
+    event_type: Optional[str] = None
+    detail: Optional[str] = None
+    payload: Optional[Dict[str, Any]] = None
+    client_timestamp: Optional[datetime] = None
+
+    def get_validated_event(self) -> tuple[str, Optional[str]]:
+        raw_type = (self.type if self.type is not None else self.event_type)
+        if not isinstance(raw_type, str) or raw_type.strip() not in _ALLOWED_PROCTOR_EVENTS:
+            raise ValueError("Invalid proctor event type")
+        clean_type = raw_type.strip()
+
+        clean_detail: Optional[str] = None
+        if self.detail is not None:
+            if not isinstance(self.detail, str) or len(self.detail) > 200:
+                raise ValueError("detail must be at most 200 characters")
+            if _CTRL_SINGLE_LINE_RE.search(self.detail):
+                raise ValueError("detail must not contain control characters")
+            clean_detail = self.detail.strip()
+        elif self.payload:
+            import json as _json
+            clean_detail = _json.dumps(self.payload)[:200]
+
+        return clean_type, clean_detail
 
 
 class GuardianEventResponse(BaseModel):
-    recorded: bool
-    trust_score: float
-    infraction_count: int
+    trust_score: int
 
 
 class InterviewFinishResponse(BaseModel):
@@ -457,20 +487,84 @@ class CandidateDetailResponse(BaseModel):
     audit_logs: List[Dict[str, Any]] = Field(default_factory=list)
 
 
+_VALID_CANDIDATE_STATUSES = {
+    "applied",
+    "shortlisted",
+    "invited",
+    "interviewing",
+    "interviewed",
+    "hired",
+    "rejected",
+    "on_hold",
+}
+
+_DECISION_MAP = {
+    "hired": "hired",
+    "hire": "hired",
+    "rejected": "rejected",
+    "reject": "rejected",
+    "on_hold": "on_hold",
+    "hold": "on_hold",
+}
+
+
 class StatusOverrideRequest(BaseModel):
-    status: str = Field(..., pattern="^(applied|shortlisted|invited|interviewing|interviewed|hired|rejected|on_hold)$")
-    reason: str = Field(..., min_length=3, max_length=500)
+    status: str
+    reason: str
+
+    def get_validated(self) -> tuple[str, str]:
+        s = (self.status or "").strip().lower()
+        if s not in _VALID_CANDIDATE_STATUSES:
+            raise ValueError("Invalid candidate status")
+        r = (self.reason or "").strip()
+        if not r or len(r) > 500 or _CTRL_SINGLE_LINE_RE.search(r):
+            raise ValueError("reason is required (1-500 chars)")
+        return s, r
 
 
 class ScoreOverrideRequest(BaseModel):
-    manual_score: float = Field(..., ge=0.0, le=100.0)
-    reason: str = Field(..., min_length=3, max_length=500)
+    score: Optional[float] = None
+    hr_score_override: Optional[float] = None
+    manual_score: Optional[float] = None
+    note: Optional[str] = None
+    reason: Optional[str] = None
+
+    def get_validated(self) -> tuple[int, str]:
+        raw_score = (
+            self.score
+            if self.score is not None
+            else (self.hr_score_override if self.hr_score_override is not None else self.manual_score)
+        )
+        if raw_score is None:
+            raise ValueError("score is required")
+        val = int(round(float(raw_score)))
+        if val < 0 or val > 100:
+            raise ValueError("score must be between 0 and 100")
+
+        raw_note = self.note if self.note is not None else self.reason
+        clean_note = (raw_note or "").strip()
+        if not clean_note or len(clean_note) > 500 or _CTRL_SINGLE_LINE_RE.search(clean_note):
+            raise ValueError("note/reason is required (1-500 chars)")
+        return val, clean_note
 
 
 class DecisionRequest(BaseModel):
-    decision: str = Field(..., pattern="^(Hire|Reject|Hold)$")
-    send_email: bool = True
+    decision: str
+    reason: Optional[str] = None
     notes: Optional[str] = None
+    send_email: bool = False
+
+    def get_validated(self) -> tuple[str, str, bool]:
+        raw_dec = (self.decision or "").strip().lower()
+        if raw_dec not in _DECISION_MAP:
+            raise ValueError("decision must be hired, rejected, or on_hold")
+        target_status = _DECISION_MAP[raw_dec]
+
+        raw_reason = self.reason if self.reason is not None else self.notes
+        clean_reason = (raw_reason or "").strip()
+        if not clean_reason or len(clean_reason) > 500 or _CTRL_SINGLE_LINE_RE.search(clean_reason):
+            raise ValueError("reason is required (1-500 chars)")
+        return target_status, clean_reason, bool(self.send_email)
 
 
 class InviteRequest(BaseModel):
@@ -483,7 +577,7 @@ class CancelInviteRequest(BaseModel):
 
 
 class AllowRetryRequest(BaseModel):
-    reason: str = Field(..., min_length=3)
+    reason: Optional[str] = "Interview retry allowed by HR"
 
 
 class EmailPreviewResponse(BaseModel):
@@ -491,6 +585,8 @@ class EmailPreviewResponse(BaseModel):
     subject: str
     html_body: str
     text_body: str
+    html: Optional[str] = None
+    text: Optional[str] = None
 
 
 class AuditLogResponse(BaseModel):

@@ -45,18 +45,24 @@ async def invite_candidate_with_token(
     actor: str = "system:scheduling_agent",
     reason: str = "Auto-invited by Scheduling Agent",
     send_email: bool = True,
+    hr_sender_email: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Creates an interview row with a fresh random token (secrets.token_urlsafe(32)),
     stores ONLY its SHA-256 hash, sets expires_at = now + 48h, sets candidate
     status = 'invited', sends the invite email via Resend with link
     FRONTEND_URL/interview/{token}, and writes email_log + audit_log.
+    Dynamically uses hr_sender_email for reply-to and delivery routing.
     """
     client = get_supabase_service_client()
     candidate_id = str(candidate["id"])
     job_id = str(job["id"])
     owner_id = str(job.get("owner_id") or job.get("created_by") or actor)
     previous_status = str(candidate.get("status") or "applied")
+
+    # If hr_sender_email was not explicitly passed, check if actor contains an email
+    if not hr_sender_email and actor and "@" in actor:
+        hr_sender_email = actor
 
     # Void any prior active/pending interview rows for this candidate (supports resend)
     try:
@@ -102,6 +108,7 @@ async def invite_candidate_with_token(
             },
             candidate_id=candidate_id,
             sent_by=actor,
+            hr_sender_email=hr_sender_email,
         )
 
     # Write audit_log
@@ -124,9 +131,10 @@ async def invite_candidate_with_token(
     }
 
 
-async def schedule_job(job_id: str) -> Dict[str, Any]:
+async def schedule_job(job_id: str, hr_sender_email: Optional[str] = None) -> Dict[str, Any]:
     """
     Deterministic Scheduling Agent (no LLM):
+    - Uses FastMCP tools (get_job_rubric, get_ranked_candidates, send_invite_email).
     - Picks top N candidates with status in ('applied', 'shortlisted') and
       effective_score >= min_score (effective_score = hr_score_override if set else ai_score).
     - Breaks ties by earliest application (created_at ascending).
@@ -136,49 +144,33 @@ async def schedule_job(job_id: str) -> Dict[str, Any]:
       and audit_log (actor='system:scheduling_agent').
     - Sets jobs.scheduler_ran_at = now().
     """
+    from app.mcp_server import call_mcp_tool
+
     client = get_supabase_service_client()
-    job_res = client.table("jobs").select("*").eq("id", job_id).execute()
-    if not job_res or not job_res.data:
-        raise ValueError(f"Job {job_id} not found")
+    job_info = await call_mcp_tool("get_job_rubric", {"job_id": job_id})
+    top_n = int(job_info.get("top_n", 5))
+    min_score = float(job_info.get("min_score", 60))
 
-    job = job_res.data[0]
-    top_n = int(job.get("top_n", 5))
-    min_score = float(job.get("min_score", 60))
-
-    cand_res = client.table("candidates").select("*").eq("job_id", job_id).execute()
-    all_candidates = cand_res.data if (cand_res and cand_res.data) else []
+    ranked_candidates = await call_mcp_tool("get_ranked_candidates", {"job_id": job_id})
 
     qualifying: List[Dict[str, Any]] = []
-    for c in all_candidates:
+    for c in (ranked_candidates or []):
         c_status = str(c.get("status") or "").lower()
         if c_status not in {"applied", "shortlisted"}:
             continue
-        eff_score = compute_effective_score(c)
-        if eff_score is None or eff_score < min_score:
+        eff_score = c.get("effective_score")
+        if eff_score is None:
+            eff_score = compute_effective_score(c)
+        if eff_score is None or float(eff_score) < min_score:
             continue
         qualifying.append(c)
-
-    # Sort by highest effective_score first, then earliest created_at ascending for tie-breaking
-    qualifying.sort(
-        key=lambda c: (
-            -(compute_effective_score(c) or 0.0),
-            _parse_created_at(c.get("created_at")),
-            str(c.get("id") or ""),
-        )
-    )
 
     selected = qualifying[:top_n]
     invited_ids: List[str] = []
 
     for cand in selected:
-        await invite_candidate_with_token(
-            candidate=cand,
-            job=job,
-            actor="system:scheduling_agent",
-            reason="Auto-invited by Scheduling Agent",
-            send_email=True,
-        )
-        cid = str(cand["id"])
+        cid = str(cand.get("candidate_id") or cand.get("id"))
+        await call_mcp_tool("send_invite_email", {"candidate_id": cid})
         invited_ids.append(cid)
         await log_agent_run(
             agent="scheduling",

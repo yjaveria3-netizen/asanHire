@@ -196,7 +196,7 @@ async def test_periodic_scheduler_finds_due_jobs_and_invites_top_n_with_tie_brea
 
     orig_send = __import__("app.services.email", fromlist=["send_templated_email"]).send_templated_email
 
-    async def spy_send_email(recipient_email, template_type, context, candidate_id=None, sent_by="system:scheduling_agent"):
+    async def spy_send_email(recipient_email, template_type, context, candidate_id=None, sent_by="system:scheduling_agent", **kwargs):
         captured_urls.append(context["interview_url"])
         return await orig_send(
             recipient_email=recipient_email,
@@ -204,6 +204,7 @@ async def test_periodic_scheduler_finds_due_jobs_and_invites_top_n_with_tie_brea
             context=context,
             candidate_id=candidate_id,
             sent_by=sent_by,
+            **kwargs,
         )
 
     with patch("app.services.scheduler.get_supabase_service_client", return_value=fake_db), \
@@ -236,11 +237,13 @@ async def test_periodic_scheduler_finds_due_jobs_and_invites_top_n_with_tie_brea
         assert store["interviews"][idx]["token_hash"] == expected_hash
         assert raw_tok not in str(store["interviews"][idx])
 
-    # Verify email_log, agent_runs (agent='scheduling'), and audit_log (actor='system:scheduling_agent')
+    # Verify email_log, agent_runs (scheduling + MCP tool calls), and audit_log (actor='system:scheduling_agent')
     assert len(store["email_log"]) == 2
     assert all(e["template"] == "invite" for e in store["email_log"])
-    assert len(store["agent_runs"]) == 2
-    assert all(a["agent"] == "scheduling" for a in store["agent_runs"])
+    sched_runs = [a for a in store["agent_runs"] if a["agent"] == "scheduling"]
+    mcp_runs = [a for a in store["agent_runs"] if str(a["agent"]).startswith("mcp:")]
+    assert len(sched_runs) == 2
+    assert len(mcp_runs) >= 4  # get_job_rubric + get_ranked_candidates + 2x send_invite_email
     assert len(store["audit_log"]) == 2
     assert all(a["actor"] == "system:scheduling_agent" for a in store["audit_log"])
 
