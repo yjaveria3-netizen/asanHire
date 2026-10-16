@@ -412,6 +412,7 @@ class JobDetailResponse(BaseModel):
     auto_invite: bool = True
     deadline: datetime
     status: str
+    scheduler_ran_at: Optional[datetime] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     message: Optional[str] = None
@@ -474,10 +475,11 @@ class DecisionRequest(BaseModel):
 
 class InviteRequest(BaseModel):
     send_email: bool = True
+    reason: Optional[str] = "Manual invite by HR"
 
 
 class CancelInviteRequest(BaseModel):
-    reason: str = Field(..., min_length=3)
+    reason: Optional[str] = "Invite cancelled by HR"
 
 
 class AllowRetryRequest(BaseModel):
