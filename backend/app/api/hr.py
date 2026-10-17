@@ -13,6 +13,7 @@ from app.services.storage import delete_resume_files
 from app.models.schemas import (
     JobCreateRequest,
     JobUpdateRequest,
+    JobDeadlineUpdateRequest,
     JobDetailResponse,
     CandidateSummaryResponse,
     CandidateStage,
@@ -734,6 +735,8 @@ async def update_job(
         now_utc = datetime.now(timezone.utc)
         if payload.deadline > now_utc:
             update_dict["scheduler_ran_at"] = None
+            if job_row.get("status") in ("closed", "expired"):
+                update_dict["status"] = "open"
 
     if update_dict:
         update_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
@@ -750,6 +753,61 @@ async def update_job(
     )
 
     return _row_to_job_detail(job_row)
+
+
+@router.patch(
+    "/jobs/{job_id}/deadline",
+    response_model=JobDetailResponse,
+    summary="Edit job deadline anytime",
+)
+@router.post(
+    "/jobs/{job_id}/deadline",
+    response_model=JobDetailResponse,
+    summary="Edit job deadline anytime",
+)
+async def update_job_deadline(
+    job_id: str,
+    payload: JobDeadlineUpdateRequest,
+    current_user: HRUser = Depends(get_hr_user),
+) -> JobDetailResponse:
+    """
+    Allows HR to edit the application deadline anytime.
+    - Updates job deadline to the requested timestamp.
+    - If moved into the future, resets scheduler_ran_at to re-arm the scheduling agent and reopens closed jobs.
+    - Emits an audit log.
+    """
+    job_row = await assert_job_owner(job_id=job_id, user_id=current_user.id)
+    client = get_supabase_service_client()
+
+    now_utc = datetime.now(timezone.utc)
+    new_deadline = payload.deadline
+    if new_deadline.tzinfo is None:
+        new_deadline = new_deadline.replace(tzinfo=timezone.utc)
+
+    old_deadline = job_row.get("deadline")
+    update_dict: Dict[str, Any] = {
+        "deadline": new_deadline.isoformat(),
+        "updated_at": now_utc.isoformat(),
+    }
+    if new_deadline > now_utc:
+        update_dict["scheduler_ran_at"] = None
+        if job_row.get("status") in ("closed", "expired"):
+            update_dict["status"] = "open"
+
+    res = client.table("jobs").update(update_dict).eq("id", job_id).execute()
+    if res and res.data:
+        job_row = res.data[0]
+
+    write_audit_log(
+        owner_id=current_user.id,
+        actor=current_user.id,
+        action="job_deadline_updated",
+        job_id=job_id,
+        reason=f"HR updated deadline from {old_deadline} to {new_deadline.isoformat()}",
+    )
+
+    return _row_to_job_detail(job_row)
+
 
 
 @router.post(
@@ -1131,6 +1189,8 @@ async def get_candidate_detail(
         "injection_suspected": bool(candidate.get("injection_suspected", False)),
         "match": candidate.get("match") or {},
         "interview": interview_row,
+        "interview_id": str(interview_row["id"]) if interview_row else None,
+        "interview_url": f"/interview/{interview_row['id']}" if interview_row else None,
         "proctor_events": proctor_events,
         "proctoring_events": proctor_events,
         "report": latest_report,

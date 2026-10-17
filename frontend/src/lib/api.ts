@@ -59,6 +59,13 @@ export const api = {
       .catch(() => []);
   },
 
+  getCandidateActiveInterview: async (email: string): Promise<any> => {
+    const qs = `?email=${encodeURIComponent(email)}`;
+    return request<any>(`/public/candidate/active-interview${qs}`)
+      .catch(() => request<any>(`/api/public/candidate/active-interview${qs}`))
+      .catch(() => ({ has_interview: false }));
+  },
+
   getPublicJob: async (jobId: string): Promise<Job> => {
     return request<Job>(`/api/public/jobs/${jobId}`).catch(() => ({
       id: jobId,
@@ -279,6 +286,22 @@ export const api = {
         body: JSON.stringify(data),
       })
     );
+  },
+
+  updateJobDeadline: async (jobId: string, deadline: string): Promise<Job> => {
+    const dateObj = new Date(deadline);
+    const isoString = isNaN(dateObj.getTime()) ? deadline : dateObj.toISOString();
+    return request<Job>(`/api/hr/jobs/${jobId}/deadline`, {
+      method: "PATCH",
+      body: JSON.stringify({ deadline: isoString }),
+    })
+      .catch(() =>
+        request<Job>(`/hr/jobs/${jobId}/deadline`, {
+          method: "PATCH",
+          body: JSON.stringify({ deadline: isoString }),
+        })
+      )
+      .catch(() => api.updateJob(jobId, { deadline: isoString } as any));
   },
 
   getDeletePreview: async (jobId: string): Promise<DeletePreview> => {

@@ -75,6 +75,14 @@ def _lookup_valid_interview(client: Any, raw_token: str) -> Dict[str, Any]:
         rows = res_salted.data if res_salted and res_salted.data else []
 
     if not rows:
+        # Fallback: allow lookup directly by interview UUID for candidate portal launcher
+        try:
+            res_id = client.table("interviews").select("*").eq("id", clean).execute()
+            rows = res_id.data if res_id and res_id.data else []
+        except Exception:
+            rows = []
+
+    if not rows:
         raise GENERIC_NOT_FOUND
 
     interview = rows[0]

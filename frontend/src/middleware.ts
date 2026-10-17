@@ -73,6 +73,8 @@ export async function middleware(request: NextRequest) {
       data: { user },
     } = await supabase.auth.getUser();
 
+    const role = (user?.user_metadata?.role as string) || "candidate";
+
     // 1. Redirect to /login if no active user session on /hr
     if (isHrPath && !user) {
       const url = request.nextUrl.clone();
@@ -81,7 +83,14 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(url);
     }
 
-    // 2. Redirect to /hr if logged-in user visits /login (unless explicit logout)
+    // 2. Candidate accessing /hr -> redirect immediately to /jobs
+    if (isHrPath && role === "candidate") {
+      const url = request.nextUrl.clone();
+      url.pathname = "/jobs";
+      return NextResponse.redirect(url);
+    }
+
+    // 3. Redirect if logged-in user visits /login (unless explicit logout)
     if (isLoginPath && user) {
       const isExplicitLogout =
         request.nextUrl.searchParams.has("logout") ||
@@ -90,7 +99,13 @@ export async function middleware(request: NextRequest) {
 
       if (!isExplicitLogout) {
         const url = request.nextUrl.clone();
-        url.pathname = "/hr";
+        if (role === "admin") {
+          url.pathname = "/admin";
+        } else if (role === "candidate") {
+          url.pathname = "/jobs";
+        } else {
+          url.pathname = "/hr";
+        }
         return NextResponse.redirect(url);
       }
     }
