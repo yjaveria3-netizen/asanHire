@@ -33,9 +33,11 @@ export default function HROverridesPage() {
   const loadOverrides = async () => {
     try {
       const data = await api.getHROverrides();
-      setOverrides(data);
+      const list = Array.isArray(data) ? data : ((data as any)?.overrides || []);
+      setOverrides(list);
     } catch (err) {
       console.error("Failed to load overrides:", err);
+      setOverrides([]);
     } finally {
       setLoading(false);
     }
@@ -67,7 +69,10 @@ export default function HROverridesPage() {
     }
   };
 
-  const filteredOverrides = overrides.filter((item) => {
+  const safeOverrides = Array.isArray(overrides) ? overrides : [];
+
+  const filteredOverrides = safeOverrides.filter((item) => {
+    if (!item) return false;
     if (categoryFilter !== "all" && item.reason_category !== categoryFilter) {
       return false;
     }
@@ -76,14 +81,15 @@ export default function HROverridesPage() {
       const matchCandidate = item.candidate_name?.toLowerCase().includes(query);
       const matchJob = item.job_title?.toLowerCase().includes(query);
       const matchReason = item.reason?.toLowerCase().includes(query);
-      return matchCandidate || matchJob || matchReason;
+      return Boolean(matchCandidate || matchJob || matchReason);
     }
     return true;
   });
 
-  const getCategoryLabel = (catVal: string) => {
+  const getCategoryLabel = (catVal?: string) => {
+    if (!catVal) return "General Override";
     const found = OVERRIDE_REASON_CATEGORIES.find((c) => c.value === catVal);
-    return found ? found.label : catVal.replace("_", " ");
+    return found ? found.label : catVal.replace(/_/g, " ");
   };
 
   const getReviewStatusInfo = (item: HROverrideEvent) => {
@@ -225,7 +231,7 @@ export default function HROverridesPage() {
                     </div>
                     <span className="text-[11px] text-[#8A8B82] mt-0.5 flex items-center gap-1 font-mono">
                       <Clock className="w-3 h-3" />
-                      {new Date(item.created_at).toLocaleString()}
+                      {item.created_at ? new Date(item.created_at).toLocaleString() : "Recently"}
                     </span>
                   </div>
 
@@ -251,11 +257,11 @@ export default function HROverridesPage() {
                       </span>
                       <ArrowRight className="w-3.5 h-3.5 text-[#DD700B] shrink-0" />
                       <span className="font-mono text-xs bg-[#1E201E] text-[#DD700B] font-bold px-2 py-1 rounded border border-[#DD700B]/30">
-                        {item.to_value || item.override_type}
+                        {item.to_value || item.override_type || "Override"}
                       </span>
                     </div>
                     <span className="text-[11px] text-[#8A8B82] capitalize">
-                      {item.override_type.replace(/_/g, " ")}
+                      {(item.override_type || "override").replace(/_/g, " ")}
                     </span>
                   </div>
 
@@ -306,7 +312,7 @@ export default function HROverridesPage() {
                               {q.question}
                             </p>
                             <span className="text-[10px] text-[#8A8B82] font-mono">
-                              Asked on {new Date(q.asked_at).toLocaleString()}
+                              Asked on {q.asked_at ? new Date(q.asked_at).toLocaleString() : "Recently"}
                             </span>
                           </div>
 

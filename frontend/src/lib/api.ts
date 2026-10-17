@@ -546,9 +546,14 @@ export const api = {
 
   // HR Overrides
   getHROverrides: async (): Promise<HROverrideEvent[]> => {
-    return request<HROverrideEvent[]>("/hr/overrides")
-      .catch(() => request<HROverrideEvent[]>("/api/hr/overrides"))
-      .catch(() => []);
+    try {
+      const res = await request<any>("/hr/overrides").catch(() => request<any>("/api/hr/overrides"));
+      if (Array.isArray(res)) return res;
+      if (res && Array.isArray(res.overrides)) return res.overrides;
+      return [];
+    } catch {
+      return [];
+    }
   },
 
   answerAdminQuestion: async (overrideId: string, questionId: string, answer: string): Promise<any> => {
