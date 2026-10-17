@@ -131,39 +131,39 @@ export default function HomePage() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
             {/* Left Column: Tagline & Plain-Language Copy */}
             <div className="lg:col-span-7 flex flex-col items-start text-left">
-              {/* Tagline with Load Animations */}
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-[#D9DADF] leading-[1.15]">
+              {/* Tagline with Load Animations, Elongated with Generous Spacing */}
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-[#D9DADF] leading-[1.3] sm:leading-[1.38] tracking-wider sm:tracking-widest flex flex-col gap-2">
                 <span className="inline-block animate-slide-left text-[#D9DADF]">
                   AI recommends.
-                </span>{" "}
+                </span>
                 <span className="inline-block animate-slide-right text-[#DD700B]">
                   Human decides.
                 </span>
               </h1>
 
               {/* Plain-Language Subtitle */}
-              <p className="mt-5 text-base sm:text-lg text-[#8A8B82] max-w-xl leading-relaxed">
+              <p className="mt-6 text-base sm:text-lg text-[#8A8B82] max-w-xl leading-relaxed">
                 Empower your hiring team with autonomous resume screening, objective rubrics, and real-time voice interviews — while every hire or rejection remains 100% under human recruiter control.
               </p>
 
-              {/* Staggered Blur-to-Clear Animated Feature Lines */}
-              <div className="mt-6 flex flex-col gap-2.5 text-xs text-[#D9DADF]">
-                <div className="flex items-center gap-2 feature-line-1">
-                  <CheckCircle2 className="w-4 h-4 text-[#DD700B] shrink-0" />
-                  <span>No automated rejections</span>
+              {/* Staggered Blur-to-Clear Animated Feature Lines with Generous Line Spacing */}
+              <div className="mt-8 flex flex-col gap-4 sm:gap-5 text-sm sm:text-base text-[#D9DADF] leading-relaxed">
+                <div className="flex items-center gap-3.5 feature-line-1">
+                  <CheckCircle2 className="w-5 h-5 text-[#DD700B] shrink-0" />
+                  <span className="tracking-wide">No automated rejections</span>
                 </div>
-                <div className="flex items-center gap-2 feature-line-2">
-                  <CheckCircle2 className="w-4 h-4 text-[#DD700B] shrink-0" />
-                  <span>Objective blind scoring</span>
+                <div className="flex items-center gap-3.5 feature-line-2">
+                  <CheckCircle2 className="w-5 h-5 text-[#DD700B] shrink-0" />
+                  <span className="tracking-wide">Objective blind scoring</span>
                 </div>
-                <div className="flex items-center gap-2 feature-line-3">
-                  <CheckCircle2 className="w-4 h-4 text-[#DD700B] shrink-0" />
-                  <span>Advisory anti-cheat proctoring</span>
+                <div className="flex items-center gap-3.5 feature-line-3">
+                  <CheckCircle2 className="w-5 h-5 text-[#DD700B] shrink-0" />
+                  <span className="tracking-wide">Advisory anti-cheat proctoring</span>
                 </div>
               </div>
             </div>
 
-            {/* Right Column: Action Buttons & Robot directly underneath */}
+            {/* Right Column: Action Buttons & Robot directly underneath the center */}
             <div className="lg:col-span-5 flex flex-col items-start sm:items-center lg:items-end gap-6 pt-2">
               {/* Action Buttons Box (Flat solid colors, thin crisp border, no heavy shadow) */}
               <div className="w-full max-w-md bg-[#242724] p-6 rounded-2xl border border-[#343834] flex flex-col gap-4">
@@ -196,8 +196,8 @@ export default function HomePage() {
                 </Link>
               </div>
 
-              {/* Robot with AH on its shirt: Positioned underneath the action buttons card as indicated by the red arrow */}
-              <div className="w-full max-w-md flex justify-center lg:justify-start pt-2">
+              {/* Robot with AH on its shirt: Positioned right under the CENTER of upper box recruiting workspace */}
+              <div className="w-full max-w-md flex justify-center items-center pt-2 -ml-2 sm:-ml-4">
                 <RobotWorker />
               </div>
             </div>
