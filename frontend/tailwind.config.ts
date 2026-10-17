@@ -46,6 +46,7 @@ const config: Config = {
       fontFamily: {
         sans: ["var(--font-paquito)", "Paquito", "Georgia", "Cambria", "'Times New Roman'", "serif"],
         serif: ["var(--font-paquito)", "Paquito", "Georgia", "Cambria", "'Times New Roman'", "serif"],
+        mono: ["var(--font-paquito)", "Paquito", "Georgia", "Cambria", "'Times New Roman'", "serif"],
       },
     },
   },

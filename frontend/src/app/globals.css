@@ -16,18 +16,22 @@
   --glow-accent: none;
 }
 
+*, *::before, *::after {
+  font-family: var(--font-paquito), "Paquito", Georgia, Cambria, "Times New Roman", serif !important;
+}
+
 body {
   background-color: var(--bg);
   color: var(--text);
-  font-family: var(--font-paquito), "Paquito", Georgia, Cambria, "Times New Roman", serif;
+  font-family: var(--font-paquito), "Paquito", Georgia, Cambria, "Times New Roman", serif !important;
   min-height: 100vh;
   margin: 0;
   padding: 0;
   -webkit-font-smoothing: antialiased;
 }
 
-h1, h2, h3, h4, h5, h6, button, input, textarea, select, nav, label {
-  font-family: var(--font-paquito), "Paquito", Georgia, Cambria, "Times New Roman", serif;
+h1, h2, h3, h4, h5, h6, p, span, a, button, input, textarea, select, nav, label, code, pre, table, th, td {
+  font-family: var(--font-paquito), "Paquito", Georgia, Cambria, "Times New Roman", serif !important;
 }
 
 /* Accessibility Focus Ring (2px Cinnamon) */
@@ -159,38 +163,38 @@ h1, h2, h3, h4, h5, h6, button, input, textarea, select, nav, label {
 }
 
 .animate-slide-left {
-  animation: slideInLeft 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: slideInLeft 1.8s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .animate-slide-right {
-  animation: slideInRight 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.18s both;
+  animation: slideInRight 1.8s cubic-bezier(0.16, 1, 0.3, 1) 0.5s both;
 }
 
 .animate-drift-1 {
-  animation: softDrift1 5s ease-in-out infinite;
+  animation: softDrift1 12s ease-in-out infinite;
 }
 
 .animate-drift-2 {
-  animation: softDrift2 6.5s ease-in-out infinite;
+  animation: softDrift2 16s ease-in-out infinite;
 }
 
 .animate-drift-3 {
-  animation: softDrift3 8s ease-in-out infinite;
+  animation: softDrift3 20s ease-in-out infinite;
 }
 
 .animate-robot-idle {
-  animation: robotIdle 3s ease-in-out infinite;
+  animation: robotIdle 6s ease-in-out infinite;
 }
 
 .animate-screen-blink {
-  animation: screenBlink 2.4s ease-in-out infinite;
+  animation: screenBlink 5s ease-in-out infinite;
 }
 
 @keyframes blurReveal {
   0% {
-    filter: blur(8px);
+    filter: blur(10px);
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(8px);
   }
   100% {
     filter: blur(0px);
@@ -200,15 +204,15 @@ h1, h2, h3, h4, h5, h6, button, input, textarea, select, nav, label {
 }
 
 .feature-line-1 {
-  animation: blurReveal 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
+  animation: blurReveal 1.4s cubic-bezier(0.16, 1, 0.3, 1) 0.4s both;
 }
 
 .feature-line-2 {
-  animation: blurReveal 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.55s both;
+  animation: blurReveal 1.4s cubic-bezier(0.16, 1, 0.3, 1) 1.6s both;
 }
 
 .feature-line-3 {
-  animation: blurReveal 0.6s cubic-bezier(0.16, 1, 0.3, 1) 1.0s both;
+  animation: blurReveal 1.4s cubic-bezier(0.16, 1, 0.3, 1) 2.8s both;
 }
 
 @media (prefers-reduced-motion: reduce) {
