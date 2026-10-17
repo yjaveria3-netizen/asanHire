@@ -42,6 +42,18 @@ export default function NewJobPage() {
     e.preventDefault();
     setFormError(null);
 
+    const cleanTitle = title.trim();
+    if (cleanTitle.length < 3) {
+      setFormError("Job Requisition Title must be at least 3 characters.");
+      return;
+    }
+
+    const cleanDesc = description.trim();
+    if (cleanDesc.length < 10) {
+      setFormError("Role Overview & Mission must be at least 10 characters.");
+      return;
+    }
+
     const deadlineDate = new Date(deadline);
     if (isNaN(deadlineDate.getTime())) {
       setFormError("Please enter a valid deadline date and time.");
@@ -56,15 +68,17 @@ export default function NewJobPage() {
     setLoading(true);
 
     const parsedSkills = requirements
-      .split(/[\n,;]+/)
-      .map((s) => s.trim())
+      .split(/[\n,;•\-]+/)
+      .map((s) => s.trim().slice(0, 50).trim())
       .filter((s) => s.length > 0)
       .slice(0, 20);
 
     const payload = {
-      title: title.trim(),
-      department: department.trim(),
-      description: description.trim(),
+      title: cleanTitle,
+      department: department.trim() || "General",
+      description: requirements.trim()
+        ? `${cleanDesc}\n\nRequirements:\n${requirements.trim()}`
+        : cleanDesc,
       requirements: requirements.trim(),
       skills: parsedSkills.length > 0 ? parsedSkills : ["General"],
       top_n: Math.max(1, Math.min(100, parseInt(topN, 10) || 5)),

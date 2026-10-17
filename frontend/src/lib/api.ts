@@ -31,7 +31,17 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     });
     if (!res.ok) {
       const errorData = await res.json().catch(() => ({}));
-      throw new Error(errorData.detail || errorData.message || `API error: ${res.status}`);
+      let errMsg = "";
+      if (typeof errorData.error === "string") {
+        errMsg = errorData.error;
+      } else if (typeof errorData.detail === "string") {
+        errMsg = errorData.detail;
+      } else if (Array.isArray(errorData.detail)) {
+        errMsg = errorData.detail.map((d: any) => d.msg || `${d.loc?.join(".")}: ${d.msg}`).join("; ");
+      } else if (typeof errorData.message === "string") {
+        errMsg = errorData.message;
+      }
+      throw new Error(errMsg || `API error: ${res.status}`);
     }
     return await res.json();
   } catch (err) {

@@ -611,6 +611,8 @@ async def create_job(
     client = get_supabase_service_client()
 
     desc = job_in.description
+    if getattr(job_in, "requirements", None) and job_in.requirements.strip() and job_in.requirements.strip() not in desc:
+        desc = f"{desc.strip()}\n\nRequirements:\n{job_in.requirements.strip()}"
     if job_in.department and not desc.strip().startswith("Department:"):
         desc = f"Department: {job_in.department.strip()}\n\n{desc.strip()}"
 

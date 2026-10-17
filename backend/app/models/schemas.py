@@ -345,6 +345,7 @@ InterviewCompleteResponse = InterviewFinishResponse
 class JobCreateRequest(BaseModel):
     title: str
     description: str
+    requirements: Optional[str] = None
     skills: List[str] = Field(default_factory=list)
     experience_level: str = "mid"
     deadline: datetime
@@ -384,18 +385,22 @@ class JobCreateRequest(BaseModel):
             return []
         if not isinstance(v, list):
             raise ValueError("skills must be a list of strings")
-        if len(v) > 20:
-            raise ValueError("skills may contain at most 20 items")
         cleaned_skills: List[str] = []
         for item in v:
             if not isinstance(item, str):
-                raise ValueError("each skill must be a string")
+                continue
             if _CTRL_SINGLE_LINE_RE.search(item):
-                raise ValueError("skill must not contain control characters")
+                item = _CTRL_SINGLE_LINE_RE.sub("", item)
             s = item.strip()
-            if not s or len(s) > 50:
-                raise ValueError("each skill must be 1 to 50 characters")
-            cleaned_skills.append(s)
+            if not s:
+                continue
+            # Gracefully clamp to 50 characters instead of failing with 422
+            if len(s) > 50:
+                s = s[:50].strip()
+            if s and s not in cleaned_skills:
+                cleaned_skills.append(s)
+            if len(cleaned_skills) >= 20:
+                break
         return cleaned_skills
 
     @field_validator("experience_level", mode="before")

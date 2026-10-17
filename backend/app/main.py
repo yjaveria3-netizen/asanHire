@@ -69,11 +69,17 @@ app.add_exception_handler(RateLimitExceeded, custom_rate_limit_exceeded_handler)
 # Global Exception Handlers
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
-    """Returns a short generic 422 error without echoing user input."""
-    logger.warning(f"Validation error on {request.method} {request.url.path}")
+    """Returns a clear 422 error detailing which fields were invalid."""
+    errors = []
+    for err in exc.errors():
+        loc = " -> ".join(str(l) for l in err.get("loc", []) if l != "body")
+        msg = err.get("msg", "Invalid value")
+        errors.append(f"{loc}: {msg}" if loc else msg)
+    error_str = "; ".join(errors) if errors else "Invalid request payload"
+    logger.warning(f"Validation error on {request.method} {request.url.path}: {error_str}")
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-        content={"error": "Invalid request payload"}
+        content={"error": error_str, "detail": error_str}
     )
 
 @app.exception_handler(HTTPException)
