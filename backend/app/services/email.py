@@ -224,8 +224,35 @@ async def send_templated_email(
     if hr_sender_email and "@" in hr_sender_email:
         hr_clean = hr_sender_email.strip()
         reply_to = hr_clean
-        # Format human-friendly display name, e.g. "Jane Doe via asanHire <onboarding@resend.dev>"
         user_name = hr_clean.split("@")[0].replace(".", " ").title()
+
+        try:
+            client_db = get_supabase_service_client()
+            prof_res = (
+                client_db.table("hr_profiles")
+                .select("contact_email, full_name, organization, reply_to_enabled")
+                .eq("contact_email", hr_clean)
+                .execute()
+            )
+            if prof_res and isinstance(prof_res.data, list) and prof_res.data:
+                prof = prof_res.data[0]
+                if isinstance(prof, dict):
+                    if prof.get("reply_to_enabled") is False:
+                        reply_to = None
+                    org = prof.get("organization")
+                    fn = prof.get("full_name")
+                    display_title = (
+                        org if isinstance(org, str) and org.strip()
+                        else (fn if isinstance(fn, str) and fn.strip() else None)
+                    )
+                    if display_title:
+                        user_name = display_title.strip()
+        except Exception:
+            pass
+
+        # Strip CR/LF to prevent email header injection
+        user_name = user_name.replace("\r", "").replace("\n", "").strip()
+
         if "<" in base_from and ">" in base_from:
             addr = base_from.split("<")[1].split(">")[0]
             from_address = f"{user_name} via asanHire <{addr}>"

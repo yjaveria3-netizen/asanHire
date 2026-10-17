@@ -103,21 +103,38 @@ Uploaded resumes pass a multi-stage validation pipeline in `app/services/pdf.py`
 1. **Clear Candidate Notice:** Before joining the interview room, candidates are explicitly presented with the proctoring guidelines:
    - *"This session passively monitors tab switching, window blur, and fullscreen status to calculate an integrity trust score. No continuous raw audio or video is stored on external servers."*
 2. **Minimal Data Retention:** Candidate voice frames are processed in-memory for real-time transcription and immediately discarded. Only the textual transcript is saved to PostgreSQL.
-3. **Audit Immutability:** Any manual HR score adjustment, status override, or decision rollback is recorded in `audit_logs` with the actor's ID, timestamp, and mandatory justification.
-4. **Candidate Right to Erasure:** A dedicated endpoint `DELETE /api/hr/candidates/{id}` permanently purges candidate PII, resume PDF, transcript, and evaluation reports.
+3. **Audit Immutability & Deletion Exception:** Any manual HR score adjustment, status override, or decision rollback is recorded in `audit_log` with the actor's ID, timestamp, and mandatory justification. However, when an HR user deletes an entire job requisition (`DELETE /api/hr/jobs/{id}`), candidate-specific audit log entries are explicitly purged to prevent candidate PII from lingering, and a single count-only tombstone row is recorded (`action='job_deleted'`) noting the job title, number of candidates removed, actor ID, and timestamp.
+4. **Candidate Right to Erasure & Full Job Deletion:** Full cascading erasure is supported via `DELETE /api/hr/jobs/{id}`. The job transitions atomically to `status = 'deleting'` (rendering all public and interview endpoints an immediate 404), candidate resume files are deleted from the private `'resumes'` storage bucket with retries, and all child rows (proctor events, reports, interviews, emails, agent runs, candidate audit entries, and candidate records) are cleanly deleted. An automated maintenance script (`backend/scripts/cleanup_orphans.py`) periodically sweeps orphan bucket files and stuck jobs.
+5. **Override Accountability & Privacy-Preserving Deletion (Part G):** Every HR override (status change, score override, decision differing from AI recommendation, decision change, manual invite below minimum score, cancel invite, allow retry) records an immutable entry in `hr_override_events` with the HR user ID, organization, job title, override type, from/to values, closed-set reason category, and a mandatory 10–500 character reason. To respect candidate right to erasure, database trigger `trg_scrub_candidate_override_pii` executes upon candidate deletion and automatically scrubs `candidate_name` to `'[candidate removed]'` in `hr_override_events`. The administrative accountability record (actor, timestamp, change details, category, reason) is strictly preserved without lingering candidate PII.
 
 ---
 
-## 5. Pre-Demo Security Checklist
+## 5. Administrative Controls & Email Architecture (Part G)
+
+### 5.1 Admin Role & Password Rotation Lifecycle
+- **Zero Hardcoded Admin Credentials:** Initial administrative accounts are created strictly via CLI `backend/scripts/create_admin.py <email> [--password <pwd>]` utilizing server-side `SUPABASE_SERVICE_ROLE_KEY`.
+- **First-Login Password Rotation Guard:** Newly provisioned admin accounts are marked with `must_change_password = true` in `user_roles`. `GET /me` returns `must_change_password: true`, the admin frontend redirects all navigation to `/admin/settings/password`, and every admin route (except `GET /me` and `POST /admin/change-password`) returns HTTP 403 Forbidden until rotated.
+- **Password Complexity & Protection:** `POST /admin/change-password` requires current password verification via Supabase password grant, mandates a new password $\ge 12$ characters differing from the current password and email address, updates credentials via Supabase Admin API, clears `must_change_password`, and writes `admin_audit_log`. The endpoint is strictly rate limited to 5 attempts per hour with automatic lockout upon repeated failures. Passwords are never logged.
+
+### 5.2 Email Reply-To Architecture & Roadmap
+- **Domain Deliverability (SPF/DKIM):** Candidate notification emails are dispatched with `From = settings.RESEND_FROM` (e.g. `Jane Recruiter via asanHire <onboarding@resend.dev>`) to guarantee SPF and DKIM authentication.
+- **Dynamic Recruiter Reply-To:** Emails set `Reply-To = hr_profiles.contact_email` (synced on HR login/`GET /me`). Candidate replies route directly to the recruiter's inbox.
+- **Roadmap Note:** Direct custom domain verification and per-organization OAuth email dispatch are planned for future enterprise releases.
+
+---
+
+## 6. Pre-Demo Security Checklist
 
 - [x] No live API keys or secrets committed to repository.
 - [x] `.env` listed in `.gitignore`.
 - [x] Supabase RLS enabled on all tables.
 - [x] Supabase service role key restricted to FastAPI backend.
 - [x] Every `/api/hr` route enforces `get_hr_user` and `assert_job_owner`.
+- [x] Admin routes enforce `get_admin_user` and `must_change_password` lockout.
 - [x] PDF uploads check `%PDF-` magic bytes and enforce 5 MB cap.
 - [x] Interview tokens hashed using SHA-256 with secret salt.
 - [x] AI agent prompts wrapped in `<untrusted_candidate_resume>` tags with security preamble.
 - [x] AI agent tools have zero ability to mutate candidate status or send emails.
-- [x] All state overrides invoke `audit.log()`.
+- [x] All state overrides invoke `audit.log()` and persist to `hr_override_events`.
+- [x] Candidate deletion scrubs override snapshots via `trg_scrub_candidate_override_pii`.
 - [x] React frontend renders candidate strings as plain text with no `dangerouslySetInnerHTML`.

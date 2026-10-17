@@ -51,7 +51,7 @@ export default function HRJobsPage() {
                   <h3 className="text-base font-bold text-[#D9DADF]">{job.title}</h3>
                   <NeuBadge status="applied" label={job.status} />
                 </div>
-                <p className="text-xs text-[#8A8B82]">{job.department} &bull; Created {new Date(job.created_at).toLocaleDateString()}</p>
+                <p className="text-xs text-[#8A8B82]">{job.department} &bull; Created {new Date(job.created_at || Date.now()).toLocaleDateString()}</p>
 
                 <div className="flex flex-wrap items-center gap-4 mt-3 text-xs text-[#8A8B82]">
                   <span className="flex items-center gap-1.5">

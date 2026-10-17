@@ -15,6 +15,7 @@ import { ScoreOverrideForm } from "@/components/hr/ScoreOverrideForm";
 import { AuditTrail } from "@/components/hr/AuditTrail";
 import { EmailPreview } from "@/components/hr/EmailPreview";
 import { StatusSelect } from "@/components/hr/StatusSelect";
+import { OverrideModal } from "@/components/hr/OverrideModal";
 import {
   ArrowLeft,
   Mail,
@@ -48,7 +49,8 @@ export default function CandidateDetailPage() {
   const [decisionPreset, setDecisionPreset] = useState<"Hire" | "Reject" | "Hold">("Hire");
   const [isStatusOverrideOpen, setIsStatusOverrideOpen] = useState(false);
   const [targetStatus, setTargetStatus] = useState<CandidateStatus>("shortlisted");
-  const [statusReason, setStatusReason] = useState("");
+  const [isRetryModalOpen, setIsRetryModalOpen] = useState(false);
+  const [isCancelInviteModalOpen, setIsCancelInviteModalOpen] = useState(false);
   const [showExtractedResume, setShowExtractedResume] = useState(false);
   const [actionFeedback, setActionFeedback] = useState<string | null>(null);
 
@@ -65,9 +67,10 @@ export default function CandidateDetailPage() {
   const handleDecisionConfirm = async (
     decision: "Hire" | "Reject" | "Hold",
     sendEmail: boolean,
-    notes: string
+    notes: string,
+    reasonCategory?: string
   ) => {
-    await api.submitDecision(candidateId, decision, sendEmail, notes);
+    await api.submitDecision(candidateId, decision, sendEmail, notes, reasonCategory);
     const newStatus = decision === "Hire" ? "hired" : decision === "Reject" ? "rejected" : "on_hold";
     setCandidate((prev: any) => ({
       ...prev,
@@ -77,13 +80,13 @@ export default function CandidateDetailPage() {
     setActionFeedback(
       `Decision recorded: ${decision.toUpperCase()}. Notification email ${
         sendEmail ? "dispatched via Resend" : "suppressed"
-      }. Audit log written.`
+      }. Override accountability logged.`
     );
   };
 
   // Score Override Handler
-  const handleScoreOverride = async (newScore: number, reason: string) => {
-    await api.overrideScore(candidateId, newScore, reason);
+  const handleScoreOverride = async (newScore: number, reason: string, reasonCategory: string) => {
+    await api.overrideScore(candidateId, newScore, reason, reasonCategory);
     setCandidate((prev: any) => ({
       ...prev,
       manual_score_override: newScore,
@@ -94,28 +97,26 @@ export default function CandidateDetailPage() {
   };
 
   // Status Override Handler
-  const handleStatusOverride = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!statusReason.trim()) return;
-
-    await api.overrideStatus(candidateId, targetStatus, statusReason);
+  const handleStatusOverrideConfirm = async (category: string, reason: string) => {
+    await api.overrideStatus(candidateId, targetStatus, reason, category);
     setCandidate((prev: any) => ({ ...prev, status: targetStatus }));
     setIsStatusOverrideOpen(false);
-    setStatusReason("");
-    setActionFeedback(`Status updated to ${targetStatus}. Justification written to immutable audit trail.`);
+    setActionFeedback(`Status updated to ${targetStatus}. Justification written to immutable override trail.`);
   };
 
   // Sovereign Action Handlers
-  const handleAllowRetry = async () => {
-    await api.allowRetry(candidateId, "Interview retry authorized by HR administrator.");
+  const handleAllowRetryConfirm = async (category: string, reason: string) => {
+    await api.allowRetry(candidateId, reason, category);
     setCandidate((prev: any) => ({ ...prev, status: "invited" }));
-    setActionFeedback("Interview session reset and re-authorized with fresh 48h token.");
+    setIsRetryModalOpen(false);
+    setActionFeedback("Interview session reset and re-authorized with fresh 48h token. Override logged.");
   };
 
-  const handleCancelInvite = async () => {
-    await api.cancelInvite(candidateId, "Invitation revoked by HR administrator.");
+  const handleCancelInviteConfirm = async (category: string, reason: string) => {
+    await api.cancelInvite(candidateId, reason, category);
     setCandidate((prev: any) => ({ ...prev, status: "shortlisted" }));
-    setActionFeedback("Interview token voided. Candidate reverted to shortlisted status.");
+    setIsCancelInviteModalOpen(false);
+    setActionFeedback("Interview token voided. Candidate reverted to shortlisted status. Override logged.");
   };
 
   const handleRegenerateReport = async () => {
@@ -206,6 +207,66 @@ export default function CandidateDetailPage() {
             >
               &times;
             </button>
+          </div>
+        )}
+
+        {/* Candidate Workflow Stage (Mini 6-Step Stepper) */}
+        {candidate.stage && (
+          <div className="neu-raised rounded-xl p-4 bg-[#1E201E] border border-[rgba(217,218,223,0.06)] space-y-3">
+            <div className="flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold uppercase tracking-wider text-[#D9DADF]">
+                  Candidate Pipeline Stage:
+                </span>
+                <span className="px-2 py-0.5 rounded font-medium bg-[#2A2D2A] text-[#DD700B] border border-[#DD700B]/30">
+                  Step {candidate.stage.step}: {candidate.stage.label}
+                </span>
+              </div>
+              <span className="text-[#8A8B82]">
+                {candidate.stage.detail}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-6 gap-2">
+              {[
+                { num: 1, name: "Rubric" },
+                { num: 2, name: "Scored" },
+                { num: 3, name: "Invite" },
+                { num: 4, name: "Interview" },
+                { num: 5, name: "Report" },
+                { num: 6, name: "Decision" },
+              ].map((s) => {
+                const isCurrent = candidate.stage.step === s.num;
+                const isPast = candidate.stage.step > s.num;
+
+                let borderStyle = "border-[rgba(217,218,223,0.08)] bg-[#242624]";
+                let textStyle = "text-[#8A8B82]";
+                let dot = <span className="w-1.5 h-1.5 rounded-full bg-[#8A8B82]/50" />;
+
+                if (isPast) {
+                  borderStyle = "border-[#8FD19E]/30 bg-[#2A2D2A]";
+                  textStyle = "text-[#8FD19E]";
+                  dot = <CheckCircle2 className="w-3 h-3 text-[#8FD19E]" />;
+                } else if (isCurrent) {
+                  borderStyle = "border-[#DD700B] bg-[#2A2D2A] ring-1 ring-[#DD700B]/50";
+                  textStyle = "text-[#DD700B] font-semibold";
+                  dot = <span className="w-2 h-2 rounded-full bg-[#DD700B] motion-safe:animate-pulse" />;
+                }
+
+                return (
+                  <div
+                    key={s.num}
+                    className={`flex items-center justify-center gap-1.5 py-1.5 px-1 rounded-md border text-center select-none ${borderStyle}`}
+                    title={`Step ${s.num}: ${s.name}`}
+                  >
+                    {dot}
+                    <span className={`text-[11px] truncate ${textStyle}`}>
+                      {s.num}. {s.name}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>
@@ -378,10 +439,10 @@ export default function CandidateDetailPage() {
             Candidate Workflow Controls:
           </span>
           <div className="flex flex-wrap items-center gap-2">
-            <NeuButton size="sm" variant="secondary" onClick={handleAllowRetry}>
+            <NeuButton size="sm" variant="secondary" onClick={() => setIsRetryModalOpen(true)}>
               <RotateCcw className="w-3.5 h-3.5 mr-1 text-[#FCF8D8]" /> Allow Retry
             </NeuButton>
-            <NeuButton size="sm" variant="secondary" onClick={handleCancelInvite}>
+            <NeuButton size="sm" variant="secondary" onClick={() => setIsCancelInviteModalOpen(true)}>
               <XCircle className="w-3.5 h-3.5 mr-1 text-[#E57373]" /> Cancel Invite
             </NeuButton>
             <NeuButton size="sm" variant="secondary" onClick={handleRegenerateReport}>
@@ -564,59 +625,62 @@ export default function CandidateDetailPage() {
         <AuditTrail logs={auditLogs} />
       </div>
 
-      {/* DECISION MODAL (Hire, Reject, Hold + Undo with reason & email preview) */}
+      {/* DECISION MODAL (Hire, Reject, Hold + Undo with reason, override categories & email preview) */}
       <DecisionModal
         isOpen={isDecisionOpen}
         onClose={() => setIsDecisionOpen(false)}
         candidateId={candidateId}
         candidateName={candidate.full_name || candidate.name || "Candidate"}
         currentStatus={candidate.status}
+        aiRecommendation={report?.recommendation}
         initialDecision={decisionPreset}
         onConfirm={handleDecisionConfirm}
       />
 
       {/* STATUS OVERRIDE MODAL */}
-      <NeuModal
+      <OverrideModal
         isOpen={isStatusOverrideOpen}
         onClose={() => setIsStatusOverrideOpen(false)}
-        title="Override Candidate Status"
-        description="Transition candidate state backwards or forwards. Requires mandatory justification."
+        title="Why are you overriding candidate status?"
+        changeDescription={`Status change: ${candidate.status} → ${targetStatus}`}
+        fromValue={candidate.status}
+        toValue={targetStatus}
+        confirmLabel="Override and save status"
+        onConfirm={handleStatusOverrideConfirm}
       >
-        <form onSubmit={handleStatusOverride} className="flex flex-col gap-4">
+        <div className="flex flex-col gap-1.5 pb-2">
+          <label className="text-xs font-semibold text-[#D9DADF] uppercase tracking-wider">
+            Target Status <span className="text-[#DD700B]">*</span>
+          </label>
           <StatusSelect value={targetStatus} onChange={setTargetStatus} />
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium text-[#8A8B82] uppercase tracking-wider">
-              Mandatory Justification Reason
-            </label>
-            <textarea
-              rows={3}
-              required
-              value={statusReason}
-              onChange={(e) => setStatusReason(e.target.value)}
-              placeholder="State the reason for this manual override (recorded in audit log)..."
-              className="neu-inset text-xs text-[#D9DADF] p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#DD700B]"
-            />
-          </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <NeuButton
-              variant="ghost"
-              size="sm"
-              type="button"
-              onClick={() => setIsStatusOverrideOpen(false)}
-            >
-              Cancel
-            </NeuButton>
-            <NeuButton
-              variant="primary"
-              size="sm"
-              type="submit"
-              disabled={!statusReason.trim()}
-            >
-              Save Override
-            </NeuButton>
-          </div>
-        </form>
-      </NeuModal>
+        </div>
+      </OverrideModal>
+
+      {/* ALLOW RETRY OVERRIDE MODAL */}
+      <OverrideModal
+        isOpen={isRetryModalOpen}
+        onClose={() => setIsRetryModalOpen(false)}
+        title="Authorize Interview Retry"
+        changeDescription="Granting candidate a fresh 48-hour interview attempt session"
+        fromValue={candidate.status}
+        toValue="invited"
+        defaultCategory="technical_issue"
+        confirmLabel="Override and authorize retry"
+        onConfirm={handleAllowRetryConfirm}
+      />
+
+      {/* CANCEL INVITE OVERRIDE MODAL */}
+      <OverrideModal
+        isOpen={isCancelInviteModalOpen}
+        onClose={() => setIsCancelInviteModalOpen(false)}
+        title="Cancel Interview Invitation"
+        changeDescription="Revoking candidate active interview invitation link and reverting to shortlisted"
+        fromValue="invited"
+        toValue="shortlisted"
+        defaultCategory="recruiter_discretion"
+        confirmLabel="Override and cancel invite"
+        onConfirm={handleCancelInviteConfirm}
+      />
     </div>
   );
 }

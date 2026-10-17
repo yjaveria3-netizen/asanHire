@@ -4,7 +4,7 @@ import logging
 from typing import Optional, Dict, Tuple
 import httpx
 from pydantic import BaseModel
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.core.config import settings
 from app.core.db import get_supabase_service_client
@@ -17,10 +17,17 @@ security_scheme = HTTPBearer(auto_error=False)
 class HRUser(BaseModel):
     id: str
     email: str
-    role: str = "authenticated"
+    role: str = "hr"
+    must_change_password: bool = False
 
-# In-memory auth cache: sha256(token) -> (HRUser, expires_at_timestamp)
-_auth_cache: Dict[str, Tuple[HRUser, float]] = {}
+class AdminUser(BaseModel):
+    id: str
+    email: str
+    role: str = "admin"
+    must_change_password: bool = False
+
+# In-memory auth cache: sha256(token) -> (HRUser | AdminUser, expires_at_timestamp)
+_auth_cache: Dict[str, Tuple[Any, float]] = {}
 _MAX_CACHE_ENTRIES = 1000
 
 def _prune_auth_cache(now: float) -> None:
@@ -34,46 +41,12 @@ def _prune_auth_cache(now: float) -> None:
         for k in sorted_keys[:excess]:
             _auth_cache.pop(k, None)
 
-async def get_hr_user(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_scheme)) -> HRUser:
-    """
-    FastAPI dependency for HR authentication.
-    - Reads Authorization: Bearer <token>.
-    - Verifies token via GET {SUPABASE_URL}/auth/v1/user with apikey header.
-    - Caches successful verification in memory for 30s keyed by SHA-256 of token.
-    - Returns generic 401 on missing, malformed, or failed verification.
-    """
-    if not credentials or not credentials.credentials:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Unauthorized"
-        )
-
-    raw_token = credentials.credentials.strip()
-    if not raw_token:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Unauthorized"
-        )
-
-    # Keyed by SHA-256 hash (never raw token)
-    token_hash = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
-    now = time.time()
-
-    # Check in-memory cache
-    if token_hash in _auth_cache:
-        user, expires_at = _auth_cache[token_hash]
-        if now < expires_at:
-            return user
-        else:
-            _auth_cache.pop(token_hash, None)
-
-    # Verify against Supabase Auth API
+async def _verify_token_with_supabase(raw_token: str) -> Dict[str, Any]:
     supabase_auth_url = f"{settings.SUPABASE_URL.rstrip('/')}/auth/v1/user"
     headers = {
         "apikey": settings.SUPABASE_PUBLISHABLE_KEY,
         "Authorization": f"Bearer {raw_token}"
     }
-
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
             resp = await client.get(supabase_auth_url, headers=headers)
@@ -83,27 +56,175 @@ async def get_hr_user(credentials: Optional[HTTPAuthorizationCredentials] = Depe
                     detail="Unauthorized"
                 )
             data = resp.json()
-            user_id = data.get("id")
-            email = data.get("email", "")
-            if not user_id:
+            if not data.get("id"):
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Unauthorized"
                 )
-            
-            hr_user = HRUser(id=str(user_id), email=email)
-            
-            # Cache for 30 seconds
-            _prune_auth_cache(now)
-            _auth_cache[token_hash] = (hr_user, now + 30.0)
-            return hr_user
-
+            return data
     except httpx.HTTPError as e:
         logger.error(f"Supabase auth verification failed with network error: {type(e).__name__}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Unauthorized"
         )
+
+async def get_hr_user(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_scheme)) -> HRUser:
+    """
+    FastAPI dependency for HR authentication.
+    - Reads Authorization: Bearer <token>.
+    - Verifies token via Supabase Auth API.
+    - Caches successful verification in memory for 30s.
+    - Syncs contact_email to hr_profiles.
+    """
+    if not credentials or not credentials.credentials:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
+
+    raw_token = credentials.credentials.strip()
+    if not raw_token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
+
+    token_hash = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+    now = time.time()
+
+    if token_hash in _auth_cache:
+        cached_user, expires_at = _auth_cache[token_hash]
+        if now < expires_at and isinstance(cached_user, HRUser):
+            return cached_user
+        else:
+            _auth_cache.pop(token_hash, None)
+
+    data = await _verify_token_with_supabase(raw_token)
+    user_id = str(data["id"])
+    email = data.get("email", "")
+
+    # Sync contact_email in hr_profiles (Part G1 / F5 requirement)
+    try:
+        db = get_supabase_service_client()
+        db.table("hr_profiles").upsert({
+            "id": user_id,
+            "contact_email": email,
+        }, on_conflict="id").execute()
+    except Exception:
+        pass
+
+    hr_user = HRUser(id=user_id, email=email, role="hr")
+    _prune_auth_cache(now)
+    _auth_cache[token_hash] = (hr_user, now + 30.0)
+    return hr_user
+
+async def get_admin_user(
+    request: Request,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_scheme),
+) -> AdminUser:
+    """
+    FastAPI dependency for Admin authentication.
+    - Requires authenticated user with role = 'admin' in user_roles.
+    - If must_change_password == True, blocks all /admin routes with 403
+      except /me and /admin/change-password.
+    """
+    if not credentials or not credentials.credentials:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
+
+    raw_token = credentials.credentials.strip()
+    if not raw_token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
+
+    data = await _verify_token_with_supabase(raw_token)
+    user_id = str(data["id"])
+    email = data.get("email", "")
+
+    # Query role from user_roles
+    db = get_supabase_service_client()
+    role_res = db.table("user_roles").select("*").eq("user_id", user_id).execute()
+    role_data = role_res.data[0] if (role_res and role_res.data) else {}
+
+    user_role = role_data.get("role", "")
+    must_change = bool(role_data.get("must_change_password", False))
+
+    if user_role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: Admin privileges required",
+        )
+
+    # If must_change_password is true, allow ONLY change-password and me routes
+    path = request.url.path.rstrip("/")
+    allowed_unlocked_paths = {
+        "/admin/change-password",
+        "/api/admin/change-password",
+        "/me",
+        "/api/me",
+    }
+    if must_change and path not in allowed_unlocked_paths:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Password change required",
+        )
+
+    return AdminUser(
+        id=user_id,
+        email=email,
+        role="admin",
+        must_change_password=must_change,
+    )
+
+async def get_current_user_profile(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_scheme),
+) -> Dict[str, Any]:
+    """
+    Returns user profile for GET /me.
+    Works for both HR and Admin users, syncing hr_profiles if HR.
+    """
+    if not credentials or not credentials.credentials:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
+
+    raw_token = credentials.credentials.strip()
+    data = await _verify_token_with_supabase(raw_token)
+    user_id = str(data["id"])
+    email = data.get("email", "")
+
+    db = get_supabase_service_client()
+    role_res = db.table("user_roles").select("*").eq("user_id", user_id).execute()
+    role_row = role_res.data[0] if (role_res and role_res.data) else {}
+
+    role = role_row.get("role", "hr")
+    must_change = bool(role_row.get("must_change_password", False))
+
+    # HR Profile lookup / sync
+    hr_profile_data: Dict[str, Any] = {
+        "contact_email": email,
+        "organization": "",
+        "full_name": "",
+        "job_title": "",
+        "reply_to_enabled": True,
+        "status": "active",
+    }
+    try:
+        p_res = db.table("hr_profiles").select("*").eq("id", user_id).execute()
+        if p_res and p_res.data:
+            existing = p_res.data[0]
+            hr_profile_data.update(existing)
+            # Sync contact_email if different
+            if existing.get("contact_email") != email:
+                db.table("hr_profiles").update({"contact_email": email}).eq("id", user_id).execute()
+                hr_profile_data["contact_email"] = email
+        else:
+            db.table("hr_profiles").insert({
+                "id": user_id,
+                "contact_email": email,
+                "status": "active",
+            }).execute()
+    except Exception:
+        pass
+
+    return {
+        "id": user_id,
+        "email": email,
+        "role": role,
+        "must_change_password": must_change,
+        "hr_profile": hr_profile_data,
+    }
 
 async def assert_job_owner(job_id: str, user_id: str) -> dict:
     """

@@ -2,7 +2,7 @@ import logging
 import sys
 from contextlib import asynccontextmanager
 from typing import Callable
-from fastapi import FastAPI, Request, Response, HTTPException, status
+from fastapi import FastAPI, Request, Response, HTTPException, status, Depends
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
@@ -10,7 +10,8 @@ from slowapi.errors import RateLimitExceeded
 
 from app.core.config import settings
 from app.core.rate_limit import limiter, custom_rate_limit_exceeded_handler
-from app.api import public, interview, hr
+from app.api import public, interview, hr, admin
+from app.core.security import get_current_user_profile
 from app.services.scheduler import start_scheduler, stop_scheduler
 
 # Structured Logging Setup (never logs tokens, API keys, resume text, or emails)
@@ -136,6 +137,14 @@ app.include_router(interview.router, prefix="/interview")
 app.include_router(interview.router, prefix="/api/interview")
 app.include_router(hr.router, prefix="/hr")
 app.include_router(hr.router, prefix="/api/hr")
+app.include_router(admin.router, prefix="/admin")
+app.include_router(admin.router, prefix="/api/admin")
+
+@app.get("/me", tags=["Auth & Identity"])
+@app.get("/api/me", tags=["Auth & Identity"])
+async def me_endpoint(profile: dict = Depends(get_current_user_profile)):
+    """Current authenticated user profile, role, and password rotation status."""
+    return profile
 
 @app.get("/health", tags=["Health"])
 async def health_check():
