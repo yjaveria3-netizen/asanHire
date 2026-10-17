@@ -1,13 +1,18 @@
 import re
 import logging
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException, status
 from email_validator import validate_email, EmailNotValidError
 
 from app.core.rate_limit import rate_limit_public
 from app.core.db import get_supabase_service_client
-from app.models.schemas import JobPublicResponse, ApplicationSubmitResponse, RegisterRoleRequest
+from app.models.schemas import (
+    JobPublicResponse,
+    ApplicationSubmitResponse,
+    RegisterRoleRequest,
+    CandidateApplicationItem,
+)
 from app.services.pdf import validate_pdf, extract_text, sanitize_text
 from app.services.storage import upload_resume
 from app.agents.matcher import run_matcher_for_candidate, detect_prompt_injection
@@ -29,6 +34,15 @@ def _parse_iso_datetime(dt_val: object) -> datetime:
     return dt if dt.tzinfo is not None else dt.replace(tzinfo=timezone.utc)
 
 
+def _parse_job_department(row: Dict[str, Any]) -> str:
+    desc = row.get("description", "")
+    department = row.get("department")
+    if not department and desc.startswith("Department:"):
+        first_line = desc.split("\n", 1)[0]
+        department = first_line.replace("Department:", "").strip()
+    return department or "General"
+
+
 @router.get(
     "/jobs/{job_id}",
     response_model=JobPublicResponse,
@@ -44,7 +58,7 @@ async def get_public_job(job_id: str) -> JobPublicResponse:
         client = get_supabase_service_client()
         res = (
             client.table("jobs")
-            .select("id, title, description, skills, deadline, status")
+            .select("id, title, description, skills, deadline, status, created_at, experience_level")
             .eq("id", job_id)
             .execute()
         )
@@ -69,9 +83,12 @@ async def get_public_job(job_id: str) -> JobPublicResponse:
         id=str(row["id"]),
         title=row.get("title", ""),
         description=row.get("description", ""),
+        department=_parse_job_department(row),
         skills=row.get("skills") or [],
+        experience_level=row.get("experience_level"),
         deadline=row["deadline"],
         status=job_status,
+        created_at=row.get("created_at"),
     )
 
 
@@ -89,7 +106,7 @@ async def list_public_jobs(search: Optional[str] = None) -> list[JobPublicRespon
         client = get_supabase_service_client()
         query = (
             client.table("jobs")
-            .select("id, title, description, skills, deadline, status, created_at")
+            .select("id, title, description, skills, deadline, status, created_at, experience_level")
             .eq("status", "open")
             .order("created_at", desc=True)
         )
@@ -106,12 +123,15 @@ async def list_public_jobs(search: Optional[str] = None) -> list[JobPublicRespon
             if job_status == "closed":
                 continue
 
+            dept = _parse_job_department(row)
+
             if search:
                 s_lower = search.strip().lower()
                 title_match = s_lower in (row.get("title") or "").lower()
                 desc_match = s_lower in (row.get("description") or "").lower()
+                dept_match = s_lower in dept.lower()
                 skills_match = any(s_lower in str(k).lower() for k in (row.get("skills") or []))
-                if not (title_match or desc_match or skills_match):
+                if not (title_match or desc_match or dept_match or skills_match):
                     continue
 
             jobs.append(
@@ -119,9 +139,12 @@ async def list_public_jobs(search: Optional[str] = None) -> list[JobPublicRespon
                     id=str(row["id"]),
                     title=row.get("title", ""),
                     description=row.get("description", ""),
+                    department=dept,
                     skills=row.get("skills") or [],
+                    experience_level=row.get("experience_level"),
                     deadline=row["deadline"],
                     status=job_status,
+                    created_at=row.get("created_at"),
                 )
             )
         return jobs
@@ -428,7 +451,7 @@ async def get_candidate_active_interview(email: str):
         # Find candidate applications with status = 'invited'
         c_res = (
             db.table("candidates")
-            .select("id, job_id, full_name, email, status")
+            .select("id, job_id, name, email, status")
             .eq("email", clean_email)
             .eq("status", "invited")
             .order("created_at", desc=True)
@@ -458,19 +481,112 @@ async def get_candidate_active_interview(email: str):
 
         interview = interviews[0]
         # Fetch job title
-        job_res = db.table("jobs").select("title, department").eq("id", job_id).execute()
+        job_res = db.table("jobs").select("title, description").eq("id", job_id).execute()
         job_data = job_res.data[0] if (job_res and job_res.data) else {}
 
         return {
             "has_interview": True,
             "interview_id": str(interview["id"]),
-            "candidate_name": cand.get("full_name"),
+            "candidate_name": cand.get("name"),
             "job_title": job_data.get("title", "Technical Role"),
-            "department": job_data.get("department", "Engineering"),
+            "department": _parse_job_department(job_data),
             "expires_at": interview.get("expires_at"),
             "interview_url": f"/interview/{interview['id']}",
         }
     except Exception as e:
         logger.warning(f"Error checking candidate active interview: {e}")
         return {"has_interview": False}
+
+
+@router.get(
+    "/candidate/applications",
+    response_model=List[CandidateApplicationItem],
+    dependencies=[Depends(rate_limit_public)],
+    summary="List all applications submitted by candidate",
+)
+async def list_candidate_applications(email: str) -> List[CandidateApplicationItem]:
+    """
+    Returns all submitted job applications for a candidate's email address,
+    including real-time status (applied, shortlisted, invited, interviewing, interviewed, hired, rejected)
+    and direct interview links if invited.
+    """
+    clean_email = (email or "").strip().lower()
+    if not clean_email or "@" not in clean_email:
+        return []
+
+    try:
+        db = get_supabase_service_client()
+        # 1. Fetch candidate application records
+        c_res = (
+            db.table("candidates")
+            .select("id, job_id, name, email, status, created_at")
+            .eq("email", clean_email)
+            .order("created_at", desc=True)
+            .execute()
+        )
+        candidates_data = c_res.data or []
+        if not candidates_data:
+            return []
+
+        # 2. Fetch corresponding job titles and departments
+        job_ids = list({str(c["job_id"]) for c in candidates_data if c.get("job_id")})
+        jobs_map: Dict[str, Dict[str, Any]] = {}
+        if job_ids:
+            try:
+                j_res = db.table("jobs").select("id, title, description").in_("id", job_ids).execute()
+                for j in (j_res.data or []):
+                    jobs_map[str(j["id"])] = {
+                        "title": j.get("title", "Technical Position"),
+                        "department": _parse_job_department(j),
+                    }
+            except Exception as e:
+                logger.warning(f"Failed to fetch job titles for candidate applications: {e}")
+
+        # 3. Fetch any active interviews
+        cand_ids = [str(c["id"]) for c in candidates_data]
+        interviews_map: Dict[str, Dict[str, Any]] = {}
+        if cand_ids:
+            try:
+                int_res = (
+                    db.table("interviews")
+                    .select("id, candidate_id, status, expires_at")
+                    .in_("candidate_id", cand_ids)
+                    .eq("voided", False)
+                    .order("created_at", desc=True)
+                    .execute()
+                )
+                for item in (int_res.data or []):
+                    cid = str(item["candidate_id"])
+                    if cid not in interviews_map:
+                        interviews_map[cid] = item
+            except Exception as e:
+                logger.warning(f"Failed to fetch interviews for candidate applications: {e}")
+
+        # 4. Construct items
+        items: List[CandidateApplicationItem] = []
+        for c in candidates_data:
+            cid = str(c["id"])
+            jid = str(c.get("job_id", ""))
+            job_info = jobs_map.get(jid, {"title": "Engineering Role", "department": "General"})
+            interview_info = interviews_map.get(cid)
+
+            items.append(
+                CandidateApplicationItem(
+                    id=cid,
+                    job_id=jid,
+                    job_title=job_info["title"],
+                    department=job_info["department"],
+                    status=str(c.get("status") or "applied"),
+                    applied_at=c.get("created_at"),
+                    interview_id=str(interview_info["id"]) if interview_info else None,
+                    interview_url=f"/interview/{interview_info['id']}" if interview_info else None,
+                    interview_status=interview_info.get("status") if interview_info else None,
+                    interview_expires_at=interview_info.get("expires_at") if interview_info else None,
+                )
+            )
+        return items
+    except Exception as e:
+        logger.error(f"Error listing candidate applications: {e}")
+        return []
+
 

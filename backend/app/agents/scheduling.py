@@ -133,6 +133,8 @@ async def invite_candidate_with_token(
         "interview_id": interview_id,
         "status": "invited",
         "expires_at": expires_iso,
+        "interview_url": interview_url,
+        "token": raw_token,
     }
 
 

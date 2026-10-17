@@ -36,35 +36,29 @@ export default function HRDashboardPage() {
   const [loggingOut, setLoggingOut] = useState(false);
 
   useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const supabase = createClient();
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (user) {
-          if (user.user_metadata?.role === "candidate") {
-            router.replace("/jobs");
-            return;
-          }
-          setEmail(user.email || null);
-        }
-      } catch {
-        // Handled silently
-      }
-
-      try {
-        const jobData = await api.getHRJobs();
-        setJobs(jobData);
-      } catch {
-        // Handled silently
-      } finally {
+    // 1. Immediately fetch HR jobs in parallel
+    api.getHRJobs()
+      .then((jobData) => {
+        setJobs(jobData || []);
+      })
+      .catch(() => {})
+      .finally(() => {
         setLoading(false);
-      }
-    };
+      });
 
-    fetchUserData();
-  }, []);
+    // 2. Fetch session concurrently from local client cache
+    const supabase = createClient();
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        const u = session.user;
+        if (u.user_metadata?.role === "candidate") {
+          router.replace("/jobs");
+          return;
+        }
+        setEmail(u.email || null);
+      }
+    }).catch(() => {});
+  }, [router]);
 
   const handleLogout = async () => {
     setLoggingOut(true);

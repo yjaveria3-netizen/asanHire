@@ -66,7 +66,8 @@ def _lookup_valid_interview(client: Any, raw_token: str) -> Dict[str, Any]:
     - not expired (expires_at > now)
     Always raises the same generic 404 to prevent token state enumeration.
     """
-    salted_hash, plain_hash = _compute_token_hashes(raw_token)
+    clean = (raw_token or "").strip()
+    salted_hash, plain_hash = _compute_token_hashes(clean)
 
     res = client.table("interviews").select("*").eq("token_hash", plain_hash).execute()
     rows = res.data if res and res.data else []
