@@ -1,19 +1,4 @@
-"use client";
-
-import React, { useState } from "react";
-import {
-  ShieldCheck,
-  Cpu,
-  UserCheck,
-  Activity,
-  Mic,
-  CheckCircle2,
-  Lock,
-  Sparkles,
-  Sliders,
-  ChevronRight,
-  Zap,
-} from "lucide-react";
+import React from "react";
 
 interface CollaborationIllustrationProps {
   className?: string;
@@ -22,256 +7,152 @@ interface CollaborationIllustrationProps {
 export const CollaborationIllustration: React.FC<CollaborationIllustrationProps> = ({
   className = "",
 }) => {
-  const [activeTelemetry, setActiveTelemetry] = useState<"ai" | "human" | "bridge">("bridge");
-
   return (
     <div className={`w-full flex flex-col items-center justify-center select-none ${className}`}>
-      {/* Outer Glow Wrapper */}
-      <div className="w-full max-w-4xl rounded-3xl p-[2px] bg-gradient-to-r from-[#DD700B] via-[#E88930]/40 to-[#DD700B]/80 shadow-[0_8px_32px_rgba(221,112,11,0.2)]">
-        {/* Main Console Surface */}
-        <div className="w-full bg-[#242724] rounded-[22px] p-6 sm:p-10 flex flex-col gap-8 overflow-hidden relative">
-          {/* Subtle Ambient Background Mesh */}
-          <div
-            className="absolute -top-24 -right-24 w-72 h-72 bg-[#DD700B]/10 rounded-full blur-3xl pointer-events-none"
-            aria-hidden="true"
-          />
-          <div
-            className="absolute -bottom-24 -left-24 w-72 h-72 bg-[#8FD19E]/10 rounded-full blur-3xl pointer-events-none"
-            aria-hidden="true"
-          />
-
+      {/* Outer Container with Crisp Orange Gradient Border */}
+      <div className="w-full max-w-3xl rounded-3xl p-[2px] bg-gradient-to-br from-[#DD700B] via-[#E88930] to-[#7A3600] shadow-[0_4px_24px_rgba(221,112,11,0.15)]">
+        {/* Inner Card on Solid Dark Palette Surface (#242724) */}
+        <div className="w-full h-full bg-[#242724] rounded-[22px] p-6 sm:p-10 flex flex-col items-center">
           {/* Header Title & Subtitle */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#383A38] pb-6 relative z-10">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-mono uppercase tracking-widest text-[#DD700B] bg-[#DD700B]/15 border border-[#DD700B]/30 px-3 py-1 rounded-full font-bold flex items-center gap-1.5">
-                  <Zap className="w-3.5 h-3.5" /> Human &bull; AI Collaborative Architecture
-                </span>
-                <span className="text-xs text-[#8FD19E] font-mono flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-[#8FD19E] animate-pulse" /> Live Telemetry
-                </span>
-              </div>
-              <h3 className="text-2xl sm:text-3xl font-extrabold text-[#D9DADF] mt-2.5 tracking-tight">
-                Dual-Node Sovereign Orchestration
-              </h3>
-              <p className="text-sm text-[#8A8B82] mt-1.5 max-w-xl leading-relaxed">
-                Autonomous AI conducts continuous objective criteria evaluation in real time, while the human recruiter maintains absolute veto sovereignty over all final decisions.
-              </p>
-            </div>
-
-            {/* Mode Selector Tabs */}
-            <div className="flex items-center gap-1.5 p-1 rounded-xl bg-[#1E201E] border border-[#383A38] self-start sm:self-center">
-              <button
-                type="button"
-                onClick={() => setActiveTelemetry("bridge")}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                  activeTelemetry === "bridge"
-                    ? "bg-[#DD700B] text-[#1E201E] font-bold"
-                    : "text-[#8A8B82] hover:text-[#D9DADF]"
-                }`}
-              >
-                Orchestration Bridge
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTelemetry("ai")}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                  activeTelemetry === "ai"
-                    ? "bg-[#DD700B] text-[#1E201E] font-bold"
-                    : "text-[#8A8B82] hover:text-[#D9DADF]"
-                }`}
-              >
-                AI Agent Pipeline
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTelemetry("human")}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                  activeTelemetry === "human"
-                    ? "bg-[#DD700B] text-[#1E201E] font-bold"
-                    : "text-[#8A8B82] hover:text-[#D9DADF]"
-                }`}
-              >
-                Human Sovereignty
-              </button>
-            </div>
+          <div className="text-center mb-6">
+            <span className="text-xs font-mono uppercase tracking-widest text-[#DD700B] bg-[#DD700B]/10 border border-[#DD700B]/30 px-3 py-1 rounded-full font-bold">
+              Human &bull; AI Partnership
+            </span>
+            <h3 className="text-2xl sm:text-3xl font-extrabold text-[#D9DADF] mt-3">
+              Collaborative Interview Orchestration
+            </h3>
+            <p className="text-xs sm:text-sm text-[#8A8B82] mt-1.5 max-w-lg mx-auto leading-relaxed">
+              Recruiter and autonomous AI agent sit side-by-side: AI conducts real-time objective scoring while the human retains full decision sovereignty.
+            </p>
           </div>
 
-          {/* Interactive Three-Pillar Architecture Diagram */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 relative z-10">
-            {/* Column 1: AI Agent Node */}
-            <div className={`p-5 rounded-2xl bg-[#1E201E] border transition-all duration-300 flex flex-col justify-between gap-4 ${
-              activeTelemetry === "ai" || activeTelemetry === "bridge"
-                ? "border-[#DD700B]/50 shadow-[0_4px_20px_rgba(221,112,11,0.1)]"
-                : "border-[#383A38] opacity-70"
-            }`}>
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-xl bg-[#DD700B]/15 border border-[#DD700B]/30 flex items-center justify-center text-[#DD700B]">
-                      <Cpu className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-bold text-[#D9DADF]">Autonomous Agent</h4>
-                      <p className="text-[11px] text-[#8A8B82] font-mono">Edge Multi-Agent Cluster</p>
-                    </div>
-                  </div>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#DD700B]/20 text-[#DD700B]">
-                    Active
-                  </span>
-                </div>
+          {/* SVG Collaboration Scene */}
+          <div className="w-full max-w-2xl animate-robot-idle" aria-label="Illustration of human recruiter and AI robot interviewing a candidate together">
+            <svg
+              viewBox="0 0 640 280"
+              className="w-full h-auto"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              {/* Floor / Base Line */}
+              <line x1="40" y1="240" x2="600" y2="240" stroke="#383A38" strokeWidth="2" strokeLinecap="round" />
 
-                {/* Animated Waveform & Criteria Feed */}
-                <div className="bg-[#262826] p-3 rounded-xl border border-[#383A38] flex flex-col gap-2">
-                  <div className="flex items-center justify-between text-[11px] text-[#8A8B82]">
-                    <span className="flex items-center gap-1 font-mono">
-                      <Mic className="w-3 h-3 text-[#DD700B]" /> Acoustic Scoring
-                    </span>
-                    <span className="font-mono text-[#8FD19E]">16kHz Live</span>
-                  </div>
+              {/* Conference Table */}
+              <rect x="120" y="160" width="400" height="12" rx="3" fill="#2E322E" stroke="#3E423E" strokeWidth="1" />
+              <rect x="150" y="172" width="16" height="68" fill="#242724" stroke="#383A38" strokeWidth="1" />
+              <rect x="474" y="172" width="16" height="68" fill="#242724" stroke="#383A38" strokeWidth="1" />
 
-                  {/* Audio Bars */}
-                  <div className="flex items-center justify-between gap-1 h-8 px-1">
-                    {[40, 75, 55, 90, 65, 80, 45, 95, 70, 50, 85, 60, 75, 40].map((h, i) => (
-                      <div
-                        key={i}
-                        style={{ height: `${h}%` }}
-                        className="w-1 rounded-full bg-gradient-to-t from-[#DD700B]/40 to-[#DD700B] animate-pulse"
-                      />
-                    ))}
-                  </div>
+              {/* Candidate (Left side of table, facing right) */}
+              <g transform="translate(60, 110)">
+                {/* Candidate Chair */}
+                <rect x="25" y="55" width="8" height="75" fill="#2E322E" />
+                <rect x="25" y="70" width="35" height="8" rx="2" fill="#383A38" />
 
-                  <div className="text-[11px] text-[#D9DADF] font-mono mt-1 pt-1.5 border-t border-[#383A38] truncate">
-                    &gt; Rubric synthesis: 94% alignment
-                  </div>
-                </div>
-              </div>
+                {/* Candidate Body */}
+                <circle cx="50" cy="20" r="14" fill="#FCF8D8" stroke="#D9DADF" strokeWidth="1" />
+                <path d="M 38 48 C 38 36 62 36 62 48 L 60 75 L 40 75 Z" fill="#8A8B82" />
+                {/* Candidate Hair */}
+                <path d="M 38 18 C 38 8 62 8 62 18 C 58 12 42 12 38 18 Z" fill="#383A38" />
+                {/* Candidate Arm & Resume Document */}
+                <path d="M 52 48 L 72 65" stroke="#FCF8D8" strokeWidth="4" strokeLinecap="round" />
+                <rect x="70" y="58" width="14" height="18" rx="1" fill="#D9DADF" stroke="#8A8B82" strokeWidth="1" />
+                <line x1="73" y1="63" x2="81" y2="63" stroke="#DD700B" strokeWidth="1" />
+                <line x1="73" y1="67" x2="81" y2="67" stroke="#8A8B82" strokeWidth="1" />
+              </g>
 
-              <div className="flex flex-col gap-1.5 pt-2 border-t border-[#383A38]/50 text-xs text-[#8A8B82]">
-                <div className="flex items-center justify-between">
-                  <span>Resume Vector Match:</span>
-                  <span className="font-mono font-bold text-[#D9DADF]">96%</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>Voice Latency:</span>
-                  <span className="font-mono font-bold text-[#8FD19E]">~420ms</span>
-                </div>
-              </div>
-            </div>
+              {/* Center Desktop Laptop */}
+              <g transform="translate(265, 115)">
+                {/* Laptop Screen (angled open) */}
+                <rect x="15" y="10" width="80" height="52" rx="4" fill="#1E201E" stroke="#3E423E" strokeWidth="1.5" />
+                <rect x="19" y="14" width="72" height="44" rx="2" fill="#262826" />
+                
+                {/* Animated Screen Waves / Speech Bars */}
+                <g className="animate-screen-blink">
+                  <line x1="28" y1="36" x2="28" y2="42" stroke="#DD700B" strokeWidth="2.5" strokeLinecap="round" />
+                  <line x1="36" y1="30" x2="36" y2="46" stroke="#FCF8D8" strokeWidth="2.5" strokeLinecap="round" />
+                  <line x1="44" y1="24" x2="44" y2="50" stroke="#DD700B" strokeWidth="2.5" strokeLinecap="round" />
+                  <line x1="52" y1="32" x2="52" y2="44" stroke="#FCF8D8" strokeWidth="2.5" strokeLinecap="round" />
+                  <line x1="60" y1="26" x2="60" y2="48" stroke="#DD700B" strokeWidth="2.5" strokeLinecap="round" />
+                  <line x1="68" y1="34" x2="68" y2="42" stroke="#FCF8D8" strokeWidth="2.5" strokeLinecap="round" />
+                  <line x1="76" y1="38" x2="76" y2="40" stroke="#DD700B" strokeWidth="2.5" strokeLinecap="round" />
+                </g>
 
-            {/* Column 2: Integrity & Tamper-Proof Audit Radar (The Bridge) */}
-            <div className={`p-5 rounded-2xl bg-[#1E201E] border transition-all duration-300 flex flex-col justify-between gap-4 ${
-              activeTelemetry === "bridge"
-                ? "border-[#8FD19E]/50 shadow-[0_4px_20px_rgba(143,209,158,0.1)]"
-                : "border-[#383A38] opacity-70"
-            }`}>
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-xl bg-[#8FD19E]/15 border border-[#8FD19E]/30 flex items-center justify-center text-[#8FD19E]">
-                      <Activity className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-bold text-[#D9DADF]">Integrity Bridge</h4>
-                      <p className="text-[11px] text-[#8A8B82] font-mono">Real-Time Telemetry</p>
-                    </div>
-                  </div>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#8FD19E]/20 text-[#8FD19E]">
-                    Secured
-                  </span>
-                </div>
+                {/* Laptop Base */}
+                <path d="M 5 62 L 105 62 L 95 70 L 15 70 Z" fill="#D9DADF" stroke="#383A38" strokeWidth="1" />
+                <rect x="48" y="64" width="14" height="4" rx="1" fill="#1E201E" />
+              </g>
 
-                {/* Radar Status Indicators */}
-                <div className="bg-[#262826] p-3 rounded-xl border border-[#383A38] flex flex-col gap-2.5 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[#8A8B82] flex items-center gap-1.5">
-                      <ShieldCheck className="w-3.5 h-3.5 text-[#8FD19E]" /> Guardian Protocol
-                    </span>
-                    <span className="text-[#8FD19E] font-mono font-bold text-[11px]">Enforced</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[#8A8B82] flex items-center gap-1.5">
-                      <Lock className="w-3.5 h-3.5 text-[#DD700B]" /> Audit Ledger
-                    </span>
-                    <span className="text-[#D9DADF] font-mono text-[11px]">Immutable</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[#8A8B82] flex items-center gap-1.5">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-[#8FD19E]" /> Vision Presence
-                    </span>
-                    <span className="text-[#8FD19E] font-mono text-[11px]">Zero-Store Edge</span>
-                  </div>
-                </div>
-              </div>
+              {/* Human Recruiter (Center-Right, sitting at table) - White Shirt */}
+              <g transform="translate(370, 75)">
+                {/* Chair Back */}
+                <rect x="55" y="45" width="8" height="115" fill="#2E322E" />
+                <rect x="25" y="105" width="38" height="8" rx="2" fill="#383A38" />
 
-              <div className="pt-2 border-t border-[#383A38]/50 text-center">
-                <span className="text-[11px] text-[#8A8B82] font-mono">
-                  Autonomous Recommendations are 100% Advisory
-                </span>
-              </div>
-            </div>
+                {/* Human Head */}
+                <circle cx="45" cy="22" r="15" fill="#FCF8D8" stroke="#D9DADF" strokeWidth="1" />
+                {/* Hair */}
+                <path d="M 32 20 C 32 6 58 6 58 20 C 58 10 32 10 32 20 Z" fill="#DD700B" />
+                {/* Torso / Crisp White Shirt */}
+                <path d="M 30 42 C 30 38 60 38 60 42 L 58 105 L 32 105 Z" fill="#FFFFFF" stroke="#D9DADF" strokeWidth="1.5" />
+                {/* Human Arm taking notes on desk */}
+                <path d="M 34 50 L 10 85" stroke="#FCF8D8" strokeWidth="5" strokeLinecap="round" />
+                {/* Notepad on desk */}
+                <rect x="0" y="80" width="22" height="26" rx="2" fill="#FFFFFF" stroke="#383A38" strokeWidth="1" />
+                <line x1="4" y1="86" x2="18" y2="86" stroke="#DD700B" strokeWidth="1.5" />
+                <line x1="4" y1="91" x2="18" y2="91" stroke="#8A8B82" strokeWidth="1.5" />
+                <line x1="4" y1="96" x2="14" y2="96" stroke="#8A8B82" strokeWidth="1.5" />
+              </g>
 
-            {/* Column 3: Sovereign Recruiter Human Node */}
-            <div className={`p-5 rounded-2xl bg-[#1E201E] border transition-all duration-300 flex flex-col justify-between gap-4 ${
-              activeTelemetry === "human" || activeTelemetry === "bridge"
-                ? "border-[#FCF8D8]/50 shadow-[0_4px_20px_rgba(252,248,216,0.1)]"
-                : "border-[#383A38] opacity-70"
-            }`}>
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-xl bg-[#FCF8D8]/15 border border-[#FCF8D8]/30 flex items-center justify-center text-[#FCF8D8]">
-                      <UserCheck className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-bold text-[#D9DADF]">Human Sovereign</h4>
-                      <p className="text-[11px] text-[#8A8B82] font-mono">Certified HR Recruiter</p>
-                    </div>
-                  </div>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#FCF8D8]/20 text-[#FCF8D8] font-bold">
-                    Veto Authority
-                  </span>
-                </div>
+              {/* AI Robot Recruiter (Right side, sitting collaboratively) */}
+              <g transform="translate(470, 70)">
+                {/* Chair */}
+                <rect x="58" y="50" width="8" height="120" fill="#2E322E" />
 
-                {/* Recruiter Action Ledger */}
-                <div className="bg-[#262826] p-3 rounded-xl border border-[#383A38] flex flex-col gap-2 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[#8A8B82]">Recommendation:</span>
-                    <span className="text-[#8FD19E] font-bold">Strong Hire (94%)</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[#8A8B82]">Human Sovereign Veto:</span>
-                    <span className="text-[#FCF8D8] font-bold font-mono">Unrestricted</span>
-                  </div>
-                  <div className="pt-1.5 border-t border-[#383A38] flex items-center justify-between">
-                    <span className="text-[11px] text-[#8A8B82]">Override Logging:</span>
-                    <span className="text-[11px] text-[#DD700B] font-mono font-bold">Accountable</span>
-                  </div>
-                </div>
-              </div>
+                {/* Antenna */}
+                <path d="M 40 18 L 32 4" stroke="#D9DADF" strokeWidth="3" strokeLinecap="round" />
+                <circle cx="30" cy="3" r="5" fill="#DD700B" />
+                <circle cx="29" cy="2" r="1.5" fill="#FCF8D8" />
 
-              <div className="flex items-center justify-between pt-2 border-t border-[#383A38]/50 text-xs">
-                <span className="text-[#8A8B82]">Human Decision Control:</span>
-                <span className="text-[#8FD19E] font-bold flex items-center gap-1 font-mono">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> 100% Final
-                </span>
-              </div>
-            </div>
-          </div>
+                {/* Robot Head Helmet */}
+                <rect x="20" y="16" width="44" height="38" rx="18" fill="#FCF8D8" stroke="#D9DADF" strokeWidth="1.5" />
+                {/* Visor Screen */}
+                <rect x="25" y="24" width="34" height="22" rx="10" fill="#1E201E" />
+                {/* Smiling Eyes (^ ^) */}
+                <path d="M 31 34 Q 35 28 39 34" stroke="#DD700B" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+                <path d="M 45 34 Q 49 28 53 34" stroke="#DD700B" strokeWidth="2.5" strokeLinecap="round" fill="none" />
 
-          {/* Bottom Collaboration Status Bar */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-4 border-t border-[#383A38] text-xs text-[#8A8B82] relative z-10">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-[#DD700B]" />
-              <span>
-                <strong>Zero Bias Synthesis:</strong> Every score is anchored strictly to job rubric criteria with tamper-proof rationale.
-              </span>
-            </div>
-            <div className="flex items-center gap-3 font-mono text-[11px]">
-              <span className="text-[#D9DADF]">Latency: &lt;1s</span>
-              <span>&bull;</span>
-              <span className="text-[#8FD19E]">Encrypted Transit</span>
-            </div>
+                {/* Robot Torso with AH Monogram */}
+                <rect x="26" y="54" width="32" height="48" rx="6" fill="#D9DADF" stroke="#383A38" strokeWidth="1" />
+                <rect x="33" y="60" width="18" height="14" rx="2" fill="#1E201E" />
+                {/* Small AH on chest */}
+                <g transform="translate(34, 61) scale(0.16)">
+                  <path d="M 34,90 L 74,39 L 74,64 L 84,64 L 84,29 L 91,17 L 91,90 L 84,90 L 84,72 L 74,72 L 74,90 L 47,90 L 53,83 L 66,83 L 66,64 L 64,64 L 44,90 Z" fill="#DD700B" />
+                </g>
+
+                {/* Robot Arm pointing to laptop findings */}
+                <path d="M 30 62 L 0 85" stroke="#FCF8D8" strokeWidth="4.5" strokeLinecap="round" />
+                <circle cx="0" cy="85" r="3.5" fill="#DD700B" />
+              </g>
+
+              {/* Cute Minion-Like Helper Bot (Floating nearby, holding checkmark badge) */}
+              <g transform="translate(200, 75)" className="animate-drift-1">
+                {/* Mini Antenna */}
+                <line x1="16" y1="8" x2="16" y2="2" stroke="#DD700B" strokeWidth="2" strokeLinecap="round" />
+                <circle cx="16" cy="1" r="2.5" fill="#DD700B" />
+
+                {/* Mini Bot Body */}
+                <rect x="4" y="8" width="24" height="26" rx="10" fill="#FCF8D8" stroke="#D9DADF" strokeWidth="1" />
+                <rect x="8" y="13" width="16" height="10" rx="4" fill="#1E201E" />
+                <circle cx="13" cy="18" r="1.5" fill="#DD700B" />
+                <circle cx="19" cy="18" r="1.5" fill="#DD700B" />
+
+                {/* Mini Holding Score Pill */}
+                <rect x="2" y="32" width="28" height="10" rx="4" fill="#1E201E" />
+                <text x="7" y="40" font-family="'Paquito', Georgia, serif" font-size="7" font-weight="bold" fill="#8FD19E">
+                  98% FIT
+                </text>
+              </g>
+            </svg>
           </div>
         </div>
       </div>
