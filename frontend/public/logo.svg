@@ -1,80 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="asanHire tile logo">
-  <defs>
-    <filter id="tile-neu" x="-20%" y="-20%" width="140%" height="140%">
-      <feOffset in="SourceAlpha" dx="4" dy="4" result="o1"/>
-      <feGaussianBlur in="o1" stdDeviation="5" result="b1"/>
-      <feFlood flood-color="#121312" result="c1"/>
-      <feComposite in2="b1" operator="in" result="s1"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="asanHire tile logo">
+  <!-- Flat tile background (reduced shadow/gradients) -->
+  <rect width="128" height="128" rx="28" fill="#1E201E"/>
+  <rect x="4" y="4" width="120" height="120" rx="24" fill="#242724" stroke="#343834" stroke-width="1"/>
 
-      <feOffset in="SourceAlpha" dx="-4" dy="-4" result="o2"/>
-      <feGaussianBlur in="o2" stdDeviation="5" result="b2"/>
-      <feFlood flood-color="#343834" result="c2"/>
-      <feComposite in2="b2" operator="in" result="s2"/>
-
-      <feMerge>
-        <feMergeNode in="s1"/>
-        <feMergeNode in="s2"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
-    <filter id="glow-orange" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="3" result="glow"/>
-      <feMerge>
-        <feMergeNode in="glow"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
-  </defs>
-
-  <!-- Tile background -->
-  <rect width="256" height="256" rx="56" fill="#1E201E"/>
-  <rect x="20" y="20" width="216" height="216" rx="46" fill="#262826" filter="url(#tile-neu)"/>
-
-  <!-- Scaled mascot in center -->
-  <g transform="translate(48, 44) scale(1.0)">
-    <!-- Antenna -->
-    <path d="M 64 36 L 49 17" stroke="#D9DADF" stroke-width="4.5" stroke-linecap="round" />
-    <circle cx="46" cy="14" r="8" fill="#DD700B" filter="url(#glow-orange)" />
-    <circle cx="44" cy="12" r="2.5" fill="#FCF8D8" />
-
-    <!-- Left Ear / Headphone -->
-    <rect x="22" y="48" width="13" height="34" rx="6.5" fill="#1E201E" stroke="#DD700B" stroke-width="3" />
-    <rect x="25" y="54" width="7" height="22" rx="3.5" fill="#DD700B" opacity="0.8" />
-
-    <!-- Right Ear / Headphone -->
-    <rect x="113" y="48" width="13" height="34" rx="6.5" fill="#1E201E" stroke="#DD700B" stroke-width="3" />
-    <rect x="116" y="54" width="7" height="22" rx="3.5" fill="#DD700B" opacity="0.8" />
-
-    <!-- Head Helmet Shell -->
-    <rect x="31" y="28" width="86" height="74" rx="37" fill="#FCF8D8" stroke="#D9DADF" stroke-width="2" />
-    <path d="M 42 39 Q 74 33 106 39" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" fill="none" opacity="0.9" />
-
-    <!-- Visor (Face Screen) -->
-    <rect x="42" y="42" width="64" height="46" rx="20" fill="#1E201E" stroke="#262826" stroke-width="1.5" />
-
-    <!-- Happy Smiling Curved Eyes (^ ^) in site accent #DD700B -->
-    <path d="M 52 64 Q 60 52 68 64" stroke="#DD700B" stroke-width="4.5" stroke-linecap="round" fill="none" filter="url(#glow-orange)" />
-    <path d="M 78 64 Q 86 52 94 64" stroke="#DD700B" stroke-width="4.5" stroke-linecap="round" fill="none" filter="url(#glow-orange)" />
-
-    <!-- Neck & Torso -->
-    <path d="M 58 102 L 90 102 L 96 110 L 52 110 Z" fill="#DD700B" />
-    <path d="M 44 110 C 44 110 49 146 51 152 C 63 155 85 155 97 152 C 99 146 104 110 104 110 Z" fill="#D9DADF" />
-    
-    <!-- Chest Trim with exact AH monogram -->
-    <rect x="56" y="115" width="36" height="22" rx="4" fill="#1E201E" stroke="#262826" stroke-width="1" />
-    <g transform="translate(60, 118) scale(0.18)">
-      <path d="M 10 70 L 75 16 L 98 16 L 98 42 L 118 42 L 118 16 L 138 2 L 138 70 L 118 70 L 118 56 L 98 56 L 98 70 L 56 70 L 70 56 L 98 56 L 98 42 L 42 42 Z" fill="#DD700B" />
-      <polygon points="56,42 82,24 82,42" fill="#1E201E" />
-    </g>
-
-    <!-- Thumbs Up Hand -->
-    <g transform="translate(104, 86)">
-      <line x1="28" y1="2" x2="38" y2="-8" stroke="#DD700B" stroke-width="3" stroke-linecap="round" />
-      <line x1="33" y1="12" x2="45" y2="9" stroke="#DD700B" stroke-width="3" stroke-linecap="round" />
-      <line x1="29" y1="22" x2="41" y2="25" stroke="#DD700B" stroke-width="3" stroke-linecap="round" />
-
-      <path d="M 0 32 C 4 28 12 24 18 24 L 22 24 C 25 24 28 27 28 30 L 28 42 C 28 45 25 48 22 48 L 8 48" fill="#D9DADF" stroke="#262826" stroke-width="1.5" />
-      <path d="M 16 24 C 16 18 16 4 20 4 C 23 4 25 8 25 15 L 25 24 Z" fill="#FCF8D8" stroke="#262826" stroke-width="1.5" />
-    </g>
+  <!-- Centered Corrected AH Mark -->
+  <g transform="translate(18, 14) scale(1.4)">
+    <path d="M 34,90 L 74,39 L 74,64 L 84,64 L 84,29 L 91,17 L 91,90 L 84,90 L 84,72 L 74,72 L 74,90 L 47,90 L 53,83 L 66,83 L 66,64 L 64,64 L 44,90 Z" fill="#DD700B" />
   </g>
 </svg>

@@ -112,12 +112,11 @@ export const RobotWorker: React.FC<RobotWorkerProps> = ({ className = "" }) => {
 
             {/* Chest Emblem with exact Geometric AH Monogram on Shirt */}
             <rect x="43" y="90" width="26" height="17" rx="3.5" fill="#1E201E" stroke="#262826" strokeWidth="1" />
-            <g transform="translate(46, 92) scale(0.145)">
+            <g transform="translate(45, 91.5) scale(0.24)">
               <path
-                d="M 10 70 L 75 16 L 98 16 L 98 42 L 118 42 L 118 16 L 138 2 L 138 70 L 118 70 L 118 56 L 98 56 L 98 70 L 56 70 L 70 56 L 98 56 L 98 42 L 42 42 Z"
+                d="M 34,90 L 74,39 L 74,64 L 84,64 L 84,29 L 91,17 L 91,90 L 84,90 L 84,72 L 74,72 L 74,90 L 47,90 L 53,83 L 66,83 L 66,64 L 64,64 L 44,90 Z"
                 fill="#DD700B"
               />
-              <polygon points="56,42 82,24 82,42" fill="#1E201E" />
             </g>
 
             {/* Hands typing on laptop keyboard */}

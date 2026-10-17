@@ -15,22 +15,22 @@ interface LogoProps {
 
 const DIMENSIONS: Record<LogoVariant, Record<LogoSize, { width: number; height: number }>> = {
   full: {
-    sm: { height: 36, width: 134 },
-    md: { height: 48, width: 178 },
-    lg: { height: 60, width: 223 },
-    xl: { height: 76, width: 282 },
+    sm: { height: 32, width: 120 },
+    md: { height: 44, width: 165 },
+    lg: { height: 54, width: 203 },
+    xl: { height: 68, width: 256 },
   },
   mark: {
-    sm: { height: 36, width: 36 },
-    md: { height: 48, width: 48 },
-    lg: { height: 60, width: 60 },
-    xl: { height: 76, width: 76 },
+    sm: { height: 32, width: 32 },
+    md: { height: 44, width: 44 },
+    lg: { height: 54, width: 54 },
+    xl: { height: 68, width: 68 },
   },
   tile: {
-    sm: { height: 36, width: 36 },
-    md: { height: 48, width: 48 },
-    lg: { height: 60, width: 60 },
-    xl: { height: 76, width: 76 },
+    sm: { height: 32, width: 32 },
+    md: { height: 44, width: 44 },
+    lg: { height: 54, width: 54 },
+    xl: { height: 68, width: 68 },
   },
 };
 
