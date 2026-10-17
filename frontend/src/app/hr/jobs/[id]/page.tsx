@@ -233,6 +233,14 @@ export default function JobDetailPage() {
         job={job}
         onSimulateDeadline={handleSimulateDeadline}
         isSimulating={isSimulatingDeadline}
+        onDeadlineUpdated={(updatedJob) => {
+          setJob(updatedJob);
+          const formatted = new Date(
+            updatedJob.deadline_at || updatedJob.deadline
+          ).toLocaleString([], { dateStyle: "medium", timeStyle: "short" });
+          setFeedbackMsg(`Application deadline successfully updated to ${formatted}.`);
+          refreshAllData();
+        }}
       />
 
       {/* 3. 6-Step Workflow Progress Tracker */}

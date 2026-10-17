@@ -476,7 +476,7 @@ class JobUpdateRequest(BaseModel):
             s = v.strip()
             has_tz = s.endswith("Z") or s.endswith("z") or re.search(r"[+-]\d{2}:?\d{2}$", s) is not None
             if not has_tz:
-                raise ValueError("Deadline must include a timezone offset or 'Z' (e.g., 2026-10-21T18:00:00Z)")
+                s = s + "Z"
             if s.endswith("Z") or s.endswith("z"):
                 s = s[:-1] + "+00:00"
             try:
@@ -484,13 +484,40 @@ class JobUpdateRequest(BaseModel):
             except Exception:
                 raise ValueError("Invalid ISO 8601 format for deadline")
         elif isinstance(v, datetime):
-            if v.tzinfo is None:
-                raise ValueError("Deadline must include a timezone offset or 'Z' (e.g., 2026-10-21T18:00:00Z)")
-            dt = v
+            dt = v if v.tzinfo is not None else v.replace(tzinfo=timezone.utc)
         else:
-            raise ValueError("Deadline must be an ISO 8601 string with a timezone offset or 'Z'")
+            raise ValueError("Deadline must be an ISO 8601 string or datetime")
 
         return dt.astimezone(timezone.utc)
+
+
+class JobDeadlineUpdateRequest(BaseModel):
+    deadline: Any
+
+    @field_validator("deadline", mode="before")
+    @classmethod
+    def validate_deadline_tz(cls, v: Any) -> datetime:
+        if v is None:
+            raise ValueError("Deadline is required")
+        import re
+        if isinstance(v, str):
+            s = v.strip()
+            has_tz = s.endswith("Z") or s.endswith("z") or re.search(r"[+-]\d{2}:?\d{2}$", s) is not None
+            if not has_tz:
+                s = s + "Z"
+            if s.endswith("Z") or s.endswith("z"):
+                s = s[:-1] + "+00:00"
+            try:
+                dt = datetime.fromisoformat(s)
+            except Exception:
+                raise ValueError("Invalid ISO 8601 format for deadline")
+        elif isinstance(v, datetime):
+            dt = v if v.tzinfo is not None else v.replace(tzinfo=timezone.utc)
+        else:
+            raise ValueError("Deadline must be an ISO 8601 string or datetime")
+
+        return dt.astimezone(timezone.utc)
+
 
 
 class JobDetailResponse(BaseModel):

@@ -37,6 +37,8 @@ import {
   ExternalLink,
   MessageSquare,
   Lock,
+  Copy,
+  Video,
 } from "lucide-react";
 
 export default function CandidateDetailPage() {
@@ -266,6 +268,47 @@ export default function CandidateDetailPage() {
                   </div>
                 );
               })}
+            </div>
+          </div>
+        )}
+
+        {/* ACTIVE INTERVIEW LINK & SESSION TOOL */}
+        {(candidate.status === "invited" || candidate.interview_id || candidate.interview?.id) && (
+          <div className="p-4 rounded-xl bg-[#242724] border border-[#DD700B]/50 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 text-xs">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 text-[#DD700B] font-bold">
+                <Video className="w-4 h-4 text-[#DD700B]" />
+                <span>Active Interview Screening Link</span>
+              </div>
+              <p className="text-[#8A8B82]">
+                Candidate can launch their screening session directly with this token link:
+              </p>
+              <div className="flex items-center gap-2 pt-0.5">
+                <code className="text-[11px] text-[#D9DADF] bg-[#1E201E] px-2.5 py-1 rounded-lg border border-[#383A38] font-mono select-all">
+                  {`${typeof window !== "undefined" ? window.location.origin : ""}/interview/${candidate.interview_id || candidate.interview?.id || candidate.id}`}
+                </code>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <NeuButton
+                size="sm"
+                variant="secondary"
+                onClick={() => {
+                  const link = `${window.location.origin}/interview/${candidate.interview_id || candidate.interview?.id || candidate.id}`;
+                  navigator.clipboard.writeText(link);
+                  setActionFeedback("Interview link copied to clipboard!");
+                }}
+              >
+                <Copy className="w-3.5 h-3.5 mr-1" /> Copy Link
+              </NeuButton>
+              <Link
+                href={`/interview/${candidate.interview_id || candidate.interview?.id || candidate.id}`}
+                target="_blank"
+              >
+                <NeuButton size="sm" variant="primary">
+                  <ExternalLink className="w-3.5 h-3.5 mr-1" /> Open Room
+                </NeuButton>
+              </Link>
             </div>
           </div>
         )}

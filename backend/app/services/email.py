@@ -208,8 +208,6 @@ async def send_templated_email(
     rendered = render_email_template(template_type, context)
 
     # 1. Target Recipient Resolution
-    # If DEMO_EMAIL_OVERRIDE is set, use it. Otherwise, if in non-production and
-    # hr_sender_email is provided, route directly to the logged-in HR's inbox.
     target_email = recipient_email
     if settings.DEMO_EMAIL_OVERRIDE and settings.DEMO_EMAIL_OVERRIDE.strip():
         target_email = settings.DEMO_EMAIL_OVERRIDE.strip()

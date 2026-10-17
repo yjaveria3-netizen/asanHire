@@ -1,21 +1,25 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { Clock, Calendar, AlertCircle, CheckCircle, Zap, ShieldAlert } from "lucide-react";
+import { Clock, Calendar, AlertCircle, CheckCircle, Zap, ShieldAlert, Edit3 } from "lucide-react";
 import { Job } from "@/lib/types";
 import { NeuButton } from "@/components/neu/NeuButton";
+import { EditDeadlineModal } from "./EditDeadlineModal";
 
 interface DeadlineCardProps {
   job: Job;
   onSimulateDeadline?: () => void;
   isSimulating?: boolean;
+  onDeadlineUpdated?: (job: Job) => void;
 }
 
 export const DeadlineCard: React.FC<DeadlineCardProps> = ({
   job,
   onSimulateDeadline,
   isSimulating = false,
+  onDeadlineUpdated,
 }) => {
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   // Compute server time offset at fetch time: serverTime - clientTime
   const serverOffsetMs = useMemo(() => {
     if (!job.server_time) return 0;
@@ -166,14 +170,25 @@ export const DeadlineCard: React.FC<DeadlineCardProps> = ({
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2.5 flex-wrap">
+        <NeuButton
+          variant="secondary"
+          size="sm"
+          onClick={() => setIsEditModalOpen(true)}
+          className="flex-shrink-0"
+          title="Change or extend the application cutoff deadline"
+        >
+          <Edit3 className="w-3.5 h-3.5 text-[#DD700B]" />
+          <span>Edit Deadline</span>
+        </NeuButton>
+
         {onSimulateDeadline && (
           <NeuButton
-            variant="secondary"
+            variant="ghost"
             size="sm"
             onClick={onSimulateDeadline}
             disabled={isSimulating}
-            className="flex-shrink-0"
+            className="flex-shrink-0 text-[#8A8B82] hover:text-[#DD700B]"
             title="Simulate the deadline passing immediately and run the Scheduling Agent"
           >
             <Zap className={`w-3.5 h-3.5 text-[#DD700B] ${isSimulating ? "animate-spin" : ""}`} />
@@ -181,6 +196,17 @@ export const DeadlineCard: React.FC<DeadlineCardProps> = ({
           </NeuButton>
         )}
       </div>
+
+      <EditDeadlineModal
+        job={job}
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        onSuccess={(updatedJob) => {
+          if (onDeadlineUpdated) {
+            onDeadlineUpdated(updatedJob);
+          }
+        }}
+      />
     </div>
   );
 };

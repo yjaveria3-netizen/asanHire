@@ -407,3 +407,70 @@ async def register_role(req: RegisterRoleRequest):
             "status": "active",
             "message": "Candidate registered successfully.",
         }
+
+
+@router.get(
+    "/candidate/active-interview",
+    summary="Get active interview invitation for candidate by email",
+)
+async def get_candidate_active_interview(email: str):
+    """
+    Looks up any active, pending interview invitation for a candidate's email address.
+    Enables candidates to launch their technical screening directly from the portal
+    even if transactional emails are delayed by third-party mail providers.
+    """
+    clean_email = (email or "").strip().lower()
+    if not clean_email or "@" not in clean_email:
+        return {"has_interview": False}
+
+    try:
+        db = get_supabase_service_client()
+        # Find candidate applications with status = 'invited'
+        c_res = (
+            db.table("candidates")
+            .select("id, job_id, full_name, email, status")
+            .eq("email", clean_email)
+            .eq("status", "invited")
+            .order("created_at", desc=True)
+            .execute()
+        )
+        candidates = c_res.data if (c_res and c_res.data) else []
+        if not candidates:
+            return {"has_interview": False}
+
+        cand = candidates[0]
+        cand_id = cand["id"]
+        job_id = cand["job_id"]
+
+        # Fetch pending interview for candidate
+        int_res = (
+            db.table("interviews")
+            .select("id, status, expires_at, created_at")
+            .eq("candidate_id", cand_id)
+            .eq("status", "pending")
+            .eq("voided", False)
+            .order("created_at", desc=True)
+            .execute()
+        )
+        interviews = int_res.data if (int_res and int_res.data) else []
+        if not interviews:
+            return {"has_interview": False}
+
+        interview = interviews[0]
+        # Fetch job title
+        job_res = db.table("jobs").select("title, department").eq("id", job_id).execute()
+        job_data = job_res.data[0] if (job_res and job_res.data) else {}
+
+        return {
+            "has_interview": True,
+            "interview_id": str(interview["id"]),
+            "candidate_name": cand.get("full_name"),
+            "job_title": job_data.get("title", "Technical Role"),
+            "department": job_data.get("department", "Engineering"),
+            "expires_at": interview.get("expires_at"),
+            "interview_url": f"/interview/{interview['id']}",
+        }
+    except Exception as e:
+        logger.warning(f"Error checking candidate active interview: {e}")
+        return {"has_interview": False}
+

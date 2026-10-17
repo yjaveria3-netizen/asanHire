@@ -8,12 +8,14 @@ import { Logo } from "@/components/brand/Logo";
 import { NeuCard } from "@/components/neu/NeuCard";
 import { NeuButton } from "@/components/neu/NeuButton";
 import { NeuBadge } from "@/components/neu/NeuBadge";
-import { Briefcase, PlusCircle, ArrowRight, Calendar, Users, ArrowLeft } from "lucide-react";
+import { Briefcase, PlusCircle, ArrowRight, Calendar, Users, ArrowLeft, Edit3 } from "lucide-react";
+import { EditDeadlineModal } from "@/components/hr/EditDeadlineModal";
 
 // OWNER: M1 (frontend developer)
 export default function HRJobsPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editingJob, setEditingJob] = useState<Job | null>(null);
 
   useEffect(() => {
     api.getHRJobs().then((data) => {
@@ -98,7 +100,7 @@ export default function HRJobsPage() {
                   <div className="flex flex-wrap items-center gap-5 mt-3 text-sm text-[#8A8B82]">
                     <span className="flex items-center gap-1.5 font-medium">
                       <Calendar className="w-4 h-4 text-[#DD700B]" />
-                      Deadline: {new Date(job.deadline).toLocaleDateString()}
+                      Deadline: {new Date(job.deadline_at || job.deadline).toLocaleDateString()}
                     </span>
                     <span className="flex items-center gap-1.5 font-medium">
                       <Users className="w-4 h-4 text-[#8FD19E]" />
@@ -108,7 +110,17 @@ export default function HRJobsPage() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 w-full md:w-auto justify-end flex-wrap">
+              <div className="flex items-center gap-2.5 w-full md:w-auto justify-end flex-wrap">
+                <NeuButton
+                  size="sm"
+                  variant="ghost"
+                  className="text-xs text-[#8A8B82] hover:text-[#DD700B]"
+                  onClick={() => setEditingJob(job)}
+                  title="Change application deadline"
+                >
+                  <Edit3 className="w-3.5 h-3.5 mr-1 text-[#DD700B]" />
+                  Edit Deadline
+                </NeuButton>
                 <Link href={`/jobs/${job.id}`} target="_blank">
                   <NeuButton size="sm" variant="ghost" className="text-xs">
                     View Public Page
@@ -123,6 +135,20 @@ export default function HRJobsPage() {
             </NeuCard>
           ))}
         </div>
+      )}
+
+      {editingJob && (
+        <EditDeadlineModal
+          job={editingJob}
+          isOpen={Boolean(editingJob)}
+          onClose={() => setEditingJob(null)}
+          onSuccess={(updatedJob) => {
+            setJobs((prev) =>
+              prev.map((j) => (j.id === updatedJob.id ? { ...j, ...updatedJob } : j))
+            );
+            setEditingJob(null);
+          }}
+        />
       )}
     </div>
   );
