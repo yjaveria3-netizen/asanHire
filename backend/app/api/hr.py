@@ -532,11 +532,18 @@ def _compute_job_progress(client: Any, job_row: Dict[str, Any]) -> JobProgressRe
 
 def _row_to_job_detail(row: Dict[str, Any], message: Optional[str] = None) -> JobDetailResponse:
     timing = _compute_job_timing_fields(row)
+    desc = row.get("description", "")
+    department = row.get("department")
+    if not department and desc.startswith("Department:"):
+        first_line = desc.split("\n", 1)[0]
+        department = first_line.replace("Department:", "").strip()
+
     return JobDetailResponse(
         id=str(row["id"]),
-        owner_id=str(row["owner_id"]) if row.get("owner_id") else None,
+        owner_id=str(row["owner_id"]) if row.get("owner_id") else (str(row.get("created_by")) if row.get("created_by") else None),
         title=row.get("title", ""),
-        description=row.get("description", ""),
+        department=department or "General",
+        description=desc,
         skills=row.get("skills") or [],
         experience_level=row.get("experience_level"),
         rubric=row.get("rubric"),
@@ -603,16 +610,21 @@ async def create_job(
     """
     client = get_supabase_service_client()
 
+    desc = job_in.description
+    if job_in.department and not desc.strip().startswith("Department:"):
+        desc = f"Department: {job_in.department.strip()}\n\n{desc.strip()}"
+
+    skills_list = job_in.skills or []
+
     insert_payload: Dict[str, Any] = {
         "owner_id": current_user.id,
         "title": job_in.title,
-        "description": job_in.description,
-        "skills": job_in.skills,
+        "description": desc,
+        "skills": skills_list,
         "experience_level": job_in.experience_level,
         "deadline": job_in.deadline.isoformat(),
         "top_n": job_in.top_n,
         "min_score": job_in.min_score,
-        "department": job_in.department,
         "auto_invite": job_in.auto_invite,
         "status": "open",
         "rubric": None,
@@ -712,7 +724,9 @@ async def update_job(
     if payload.status is not None:
         update_dict["status"] = payload.status
     if payload.department is not None:
-        update_dict["department"] = payload.department
+        cur_desc = update_dict.get("description") or (job_row.get("description") or "")
+        if payload.department and not cur_desc.strip().startswith("Department:"):
+            update_dict["description"] = f"Department: {payload.department.strip()}\n\n{cur_desc.strip()}"
     if payload.deadline is not None:
         update_dict["deadline"] = payload.deadline.isoformat()
         now_utc = datetime.now(timezone.utc)

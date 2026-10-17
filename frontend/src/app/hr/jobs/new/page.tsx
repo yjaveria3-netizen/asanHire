@@ -55,19 +55,30 @@ export default function NewJobPage() {
 
     setLoading(true);
 
+    const parsedSkills = requirements
+      .split(/[\n,;]+/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0)
+      .slice(0, 20);
+
     const payload = {
-      title,
-      department,
-      description,
-      requirements,
-      top_n: parseInt(topN, 10),
-      min_score: parseFloat(minScore),
+      title: title.trim(),
+      department: department.trim(),
+      description: description.trim(),
+      requirements: requirements.trim(),
+      skills: parsedSkills.length > 0 ? parsedSkills : ["General"],
+      top_n: Math.max(1, Math.min(100, parseInt(topN, 10) || 5)),
+      min_score: Math.max(0, Math.min(100, Math.round(Number(minScore) || 60))),
       deadline: deadlineDate.toISOString(), // Strictly ISO 8601 with Z
     };
 
     try {
       const created = await api.createHRJob(payload);
-      router.push(`/hr/jobs/${created.id}`);
+      if (created && created.id) {
+        router.push(`/hr/jobs/${created.id}`);
+      } else {
+        throw new Error("Job was created but no requisition ID was returned.");
+      }
     } catch (err: any) {
       setFormError(err.message || "Failed to create job requisition.");
     } finally {

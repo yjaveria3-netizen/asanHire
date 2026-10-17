@@ -228,52 +228,18 @@ export const api = {
 
   // HR Endpoints
   getHRJobs: async (): Promise<Job[]> => {
-    return request<Job[]>("/api/hr/jobs").catch(() => [
-      {
-        id: "11111111-1111-1111-1111-111111111111",
-        title: "Senior AI / Full-Stack Engineer",
-        department: "Product Engineering",
-        description: "Leading frontend and agent architecture.",
-        requirements: "Next.js, FastAPI, Supabase",
-        deadline: new Date(Date.now() + 86400000 * 3).toISOString(),
-        status: "active",
-        candidate_count: 5,
-        rubric: {
-          criteria: [
-            { name: "Technical Depth", weight: 40, description: "TypeScript & Next.js" },
-            { name: "System Design", weight: 30, description: "FastAPI & Microservices" },
-            { name: "Communication", weight: 30, description: "Clarity of thought" },
-          ],
-        },
-      },
-    ]);
+    return request<Job[]>("/api/hr/jobs").catch(() => []);
   },
 
   getHRJobDetail: async (jobId: string): Promise<Job> => {
-    return request<Job>(`/api/hr/jobs/${jobId}`).catch(() => ({
-      id: jobId,
-      title: "Senior AI / Full-Stack Engineer",
-      department: "Product Engineering",
-      description: "Leading frontend and agent architecture.",
-      requirements: "Next.js, FastAPI, Supabase",
-      deadline: new Date(Date.now() + 86400000 * 3).toISOString(),
-      status: "active",
-      candidate_count: 5,
-      rubric: {
-        criteria: [
-          { name: "Technical Depth", weight: 40, description: "TypeScript & Next.js" },
-          { name: "System Design", weight: 30, description: "FastAPI & Microservices" },
-          { name: "Communication", weight: 30, description: "Clarity of thought" },
-        ],
-      },
-    }));
+    return request<Job>(`/api/hr/jobs/${jobId}`);
   },
 
   createHRJob: async (data: any): Promise<any> => {
     return request<any>("/api/hr/jobs", {
       method: "POST",
       body: JSON.stringify(data),
-    }).catch(() => ({ success: true, id: "11111111-1111-1111-1111-111111111111" }));
+    });
   },
 
   createJob: async (data: any): Promise<any> => {
