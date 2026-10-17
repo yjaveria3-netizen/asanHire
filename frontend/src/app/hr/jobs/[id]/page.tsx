@@ -157,31 +157,35 @@ export default function JobDetailPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      {/* Back to Jobs Navigation */}
+      <div>
+        <Link
+          href="/hr/jobs"
+          className="inline-flex items-center gap-2 text-sm text-[#8A8B82] hover:text-[#DD700B] transition-colors py-1 px-2 -ml-2 rounded-lg hover:bg-[#242724]"
+        >
+          <ArrowLeft className="w-4 h-4 text-[#DD700B]" />
+          <span>Back to Jobs</span>
+        </Link>
+      </div>
+
       {/* 1. Header & Actions Bar */}
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Link href="/hr/jobs">
-            <NeuButton size="sm" variant="secondary">
-              <ArrowLeft className="w-4 h-4 mr-1" /> Back to Jobs
-            </NeuButton>
-          </Link>
-          <div className="flex items-center gap-3">
-            <Logo variant="mark" size="md" href={null} />
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-bold text-[#D9DADF]">{job.title}</h1>
-                <NeuBadge status="applied" label={job.status} />
-              </div>
-              <p className="text-xs text-[#8A8B82] mt-0.5">
-                {job.department || "Engineering"} &bull; ID: {job.id.substring(0, 8)}...
-              </p>
+        <div className="flex items-center gap-3.5">
+          <Logo variant="mark" size="md" href={null} />
+          <div>
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <h1 className="text-2xl sm:text-3xl font-bold text-[#D9DADF]">{job.title}</h1>
+              <NeuBadge status="applied" label={job.status} />
             </div>
+            <p className="text-sm text-[#8A8B82] mt-1">
+              {job.department || "General"} &bull; ID: <span className="font-mono text-xs">{job.id.substring(0, 8)}...</span>
+            </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
           <Link href={`/jobs/${job.id}`} target="_blank">
-            <NeuButton size="sm" variant="secondary">
+            <NeuButton size="sm" variant="secondary" className="text-xs font-semibold">
               Public Application Page <ExternalLink className="w-3.5 h-3.5 ml-1" />
             </NeuButton>
           </Link>

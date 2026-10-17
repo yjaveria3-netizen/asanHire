@@ -123,7 +123,7 @@ export default function HRDashboardPage() {
 
       {/* KPI Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <NeuCard variant="raised" className="p-5 flex flex-col justify-between hover:border-[#DD700B]/40 transition-all">
+        <NeuCard variant="raised" className="p-5 flex flex-col justify-between hover:border-[#DD700B]/40 hover:-translate-y-0.5 hover:shadow-lg transition-all">
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-[#8A8B82]">Active Positions</span>
             <div className="w-8 h-8 rounded-lg bg-[#DD700B]/10 border border-[#DD700B]/20 flex items-center justify-center text-[#DD700B]">
@@ -132,55 +132,55 @@ export default function HRDashboardPage() {
           </div>
           <div className="mt-4">
             <div className="text-3xl font-bold text-[#D9DADF]">
-              {loading ? "..." : jobs.length || 3}
+              {loading ? "..." : jobs.length}
             </div>
-            <div className="text-xs text-[#8FD19E] mt-1 flex items-center gap-1">
+            <div className="text-xs text-[#8FD19E] mt-1 flex items-center gap-1 font-medium">
               <CheckCircle2 className="w-3.5 h-3.5" /> All rubrics synthesized
             </div>
           </div>
         </NeuCard>
 
-        <NeuCard variant="raised" className="p-5 flex flex-col justify-between">
+        <NeuCard variant="raised" className="p-5 flex flex-col justify-between hover:border-[#8FD19E]/40 hover:-translate-y-0.5 hover:shadow-lg transition-all">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-[#8A8B82]">Total Screened</span>
+            <span className="text-sm font-medium text-[#8A8B82]">Total Screened</span>
             <div className="w-8 h-8 rounded-lg bg-[#8FD19E]/10 border border-[#8FD19E]/20 flex items-center justify-center text-[#8FD19E]">
               <Users className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-4">
             <div className="text-3xl font-bold text-[#D9DADF]">42</div>
-            <div className="text-[11px] text-[#8A8B82] mt-1">
-              Across all requisition pipelines
+            <div className="text-xs text-[#8A8B82] mt-1">
+              Across all active pipelines
             </div>
           </div>
         </NeuCard>
 
-        <NeuCard variant="raised" className="p-5 flex flex-col justify-between">
+        <NeuCard variant="raised" className="p-5 flex flex-col justify-between hover:border-[#FCF8D8]/40 hover:-translate-y-0.5 hover:shadow-lg transition-all">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-[#8A8B82]">Voice Screening Avg</span>
+            <span className="text-sm font-medium text-[#8A8B82]">Voice Screening Avg</span>
             <div className="w-8 h-8 rounded-lg bg-[#FCF8D8]/10 border border-[#FCF8D8]/20 flex items-center justify-center text-[#FCF8D8]">
               <Mic className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-4">
             <div className="text-3xl font-bold text-[#FCF8D8]">84.6%</div>
-            <div className="text-[11px] text-[#8A8B82] mt-1">
-              Groq Llama 3 objective score
+            <div className="text-xs text-[#8A8B82] mt-1">
+              Groq AI objective score
             </div>
           </div>
         </NeuCard>
 
-        <NeuCard variant="raised" className="p-5 flex flex-col justify-between">
+        <NeuCard variant="raised" className="p-5 flex flex-col justify-between hover:border-[#8FD19E]/40 hover:-translate-y-0.5 hover:shadow-lg transition-all">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-[#8A8B82]">Guardian Integrity Avg</span>
+            <span className="text-sm font-medium text-[#8A8B82]">Guardian Integrity Avg</span>
             <div className="w-8 h-8 rounded-lg bg-[#8FD19E]/10 border border-[#8FD19E]/20 flex items-center justify-center text-[#8FD19E]">
               <Shield className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-4">
             <div className="text-3xl font-bold text-[#8FD19E]">96.8%</div>
-            <div className="text-[11px] text-[#8FD19E] mt-1 flex items-center gap-1">
-              <CheckCircle2 className="w-3 h-3" /> Zero critical violations
+            <div className="text-xs text-[#8FD19E] mt-1 flex items-center gap-1 font-medium">
+              <CheckCircle2 className="w-3.5 h-3.5" /> High trust confidence
             </div>
           </div>
         </NeuCard>
@@ -252,41 +252,41 @@ export default function HRDashboardPage() {
           </div>
         </div>
 
-        {/* Right Column: System Orchestration Status & Quick Links (1 col) */}
+        {/* Right Column: AI Pipeline Health & Quick Resources (1 col) */}
         <div className="flex flex-col gap-6">
-          {/* FastMCP Agent Health */}
+          {/* Autonomous AI & Proctoring Health */}
           <div className="neu-raised p-5 rounded-xl flex flex-col gap-4">
             <h3 className="text-sm font-bold text-[#D9DADF] flex items-center gap-2">
               <Activity className="w-4 h-4 text-[#8FD19E]" />
-              Agent Tool Orchestration
+              AI Hiring Pipeline Health
             </h3>
             <p className="text-xs text-[#8A8B82] leading-relaxed">
-              FastMCP server running with 8 discrete tools. All agent operations audit-logged to database.
+              Autonomous candidate screening and integrity radar operational. 100% human recruiter sovereignty active.
             </p>
 
-            <div className="space-y-2.5 pt-2 border-t border-[#383A38] text-xs">
+            <div className="space-y-3 pt-2 border-t border-[#383A38] text-sm">
               <div className="flex items-center justify-between">
-                <span className="text-[#8A8B82]">Rubric Synthesizer</span>
-                <span className="text-[#8FD19E] font-mono text-[11px] flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#8FD19E]" /> Active
+                <span className="text-[#8A8B82] text-xs">Objective Rubric Synthesizer</span>
+                <span className="text-[#8FD19E] font-mono text-xs flex items-center gap-1.5 font-medium">
+                  <span className="w-2 h-2 rounded-full bg-[#8FD19E]" /> Active
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-[#8A8B82]">Groq Voice Agent (Llama 3)</span>
-                <span className="text-[#8FD19E] font-mono text-[11px] flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#8FD19E]" /> Active
+                <span className="text-[#8A8B82] text-xs">Voice Screening Model</span>
+                <span className="text-[#8FD19E] font-mono text-xs flex items-center gap-1.5 font-medium">
+                  <span className="w-2 h-2 rounded-full bg-[#8FD19E]" /> Active
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-[#8A8B82]">Guardian Telemetry Engine</span>
-                <span className="text-[#8FD19E] font-mono text-[11px] flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#8FD19E]" /> Active
+                <span className="text-[#8A8B82] text-xs">Guardian Proctoring Radar</span>
+                <span className="text-[#8FD19E] font-mono text-xs flex items-center gap-1.5 font-medium">
+                  <span className="w-2 h-2 rounded-full bg-[#8FD19E]" /> Active
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-[#8A8B82]">Supervisor Dispatcher</span>
-                <span className="text-[#8FD19E] font-mono text-[11px] flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#8FD19E]" /> Ready
+                <span className="text-[#8A8B82] text-xs">Human Sovereignty &amp; Audit Trail</span>
+                <span className="text-[#8FD19E] font-mono text-xs flex items-center gap-1.5 font-medium">
+                  <span className="w-2 h-2 rounded-full bg-[#8FD19E]" /> Guaranteed
                 </span>
               </div>
             </div>
@@ -295,26 +295,37 @@ export default function HRDashboardPage() {
           {/* Quick Shortcuts */}
           <div className="neu-inset p-5 rounded-xl flex flex-col gap-3">
             <h3 className="text-xs font-bold uppercase tracking-wider text-[#DD700B]">
-              Quick Resources
+              Quick Shortcuts
             </h3>
             <Link
-              href="/interview/demo-token"
-              className="flex items-center justify-between p-2.5 rounded-lg bg-[#1E201E] border border-[#383A38] text-xs text-[#D9DADF] hover:border-[#DD700B] transition-colors"
+              href="/hr/jobs/new"
+              className="flex items-center justify-between p-3 rounded-lg bg-[#1E201E] border border-[#383A38] text-sm text-[#D9DADF] hover:border-[#DD700B] transition-colors"
             >
-              <div className="flex items-center gap-2">
-                <Mic className="w-4 h-4 text-[#DD700B]" />
-                <span>Candidate Voice Interview Test</span>
+              <div className="flex items-center gap-2.5">
+                <PlusCircle className="w-4 h-4 text-[#DD700B]" />
+                <span className="font-medium">Post a New Job</span>
               </div>
               <ArrowRight className="w-3.5 h-3.5 text-[#8A8B82]" />
             </Link>
 
             <Link
-              href="/hr/design-check"
-              className="flex items-center justify-between p-2.5 rounded-lg bg-[#1E201E] border border-[#383A38] text-xs text-[#D9DADF] hover:border-[#DD700B] transition-colors"
+              href="/interview/demo-token"
+              className="flex items-center justify-between p-3 rounded-lg bg-[#1E201E] border border-[#383A38] text-sm text-[#D9DADF] hover:border-[#DD700B] transition-colors"
             >
-              <div className="flex items-center gap-2">
-                <ExternalLink className="w-4 h-4 text-[#FCF8D8]" />
-                <span>Living Styleguide &amp; Neumorphic Audit</span>
+              <div className="flex items-center gap-2.5">
+                <Mic className="w-4 h-4 text-[#8FD19E]" />
+                <span className="font-medium">Candidate Voice Room Demo</span>
+              </div>
+              <ArrowRight className="w-3.5 h-3.5 text-[#8A8B82]" />
+            </Link>
+
+            <Link
+              href="/hr/overrides"
+              className="flex items-center justify-between p-3 rounded-lg bg-[#1E201E] border border-[#383A38] text-sm text-[#D9DADF] hover:border-[#DD700B] transition-colors"
+            >
+              <div className="flex items-center gap-2.5">
+                <Shield className="w-4 h-4 text-[#FCF8D8]" />
+                <span className="font-medium">Override Accountability Ledger</span>
               </div>
               <ArrowRight className="w-3.5 h-3.5 text-[#8A8B82]" />
             </Link>

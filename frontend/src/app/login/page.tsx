@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
@@ -17,6 +18,9 @@ import {
   AlertCircle,
   Clock,
   Building2,
+  ArrowLeft,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
 import { api } from "@/lib/api";
@@ -25,6 +29,7 @@ export default function LoginPage() {
   const router = useRouter();
   const [mode, setMode] = useState<"signin" | "register">("signin");
   const [role, setRole] = useState<"hr" | "candidate">("hr");
+  const [showPassword, setShowPassword] = useState(false);
 
   // Form states
   const [fullName, setFullName] = useState("");
@@ -90,7 +95,7 @@ export default function LoginPage() {
           await supabase.auth.signOut();
           setPendingEmail(trimmedEmail);
           setShowPendingScreen(true);
-          toast.error("Your HR account is pending administrator approval. Please contact admin@asanhire.dev.", {
+          toast.error("Your HR account is pending administrator approval. Please contact yjaveria3@gmail.com.", {
             position: "top-center",
             duration: 6000,
           });
@@ -244,6 +249,17 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-[#1E201E] text-[#D9DADF] flex items-center justify-center p-4 selection:bg-[#DD700B] selection:text-[#1E201E]">
       <div className="w-full max-w-md">
+        {/* Back to Home Navigation */}
+        <div className="mb-4">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 text-sm text-[#8A8B82] hover:text-[#DD700B] transition-colors py-1 px-2 -ml-2 rounded-lg hover:bg-[#242724]"
+          >
+            <ArrowLeft className="w-4 h-4 text-[#DD700B]" />
+            <span>Return to Home</span>
+          </Link>
+        </div>
+
         {/* Logo + Subtitle */}
         <div className="flex flex-col items-center mb-6 gap-3">
           <Logo variant="full" size="lg" href="/" priority />
@@ -365,24 +381,41 @@ export default function LoginPage() {
 
                   {/* Password */}
                   <div className="flex flex-col gap-1.5">
-                    <label
-                      htmlFor="password"
-                      className="block text-xs font-semibold uppercase tracking-wider text-[#8A8B82]"
-                    >
-                      Password
-                    </label>
+                    <div className="flex items-center justify-between">
+                      <label
+                        htmlFor="password"
+                        className="block text-xs font-semibold uppercase tracking-wider text-[#8A8B82]"
+                      >
+                        Password
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="text-xs text-[#8A8B82] hover:text-[#DD700B] flex items-center gap-1 transition-colors"
+                      >
+                        {showPassword ? (
+                          <>
+                            <EyeOff className="w-3.5 h-3.5" /> <span>Hide</span>
+                          </>
+                        ) : (
+                          <>
+                            <Eye className="w-3.5 h-3.5" /> <span>Show</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
                     <div className="relative">
                       <Lock className="w-4 h-4 text-[#8A8B82] absolute left-3 top-3 pointer-events-none" />
                       <input
                         id="password"
-                        type="password"
+                        type={showPassword ? "text" : "password"}
                         placeholder="••••••••••••"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         disabled={loading}
                         required
                         autoComplete="current-password"
-                        className="block w-full h-10 pl-9 rounded-md border border-[#8A8B82]/30 bg-[#1E201E] px-3 py-2 text-sm text-[#D9DADF] placeholder:text-[#8A8B82]/60 focus:outline-none focus:ring-2 focus:ring-[#DD700B] disabled:opacity-50"
+                        className="block w-full h-10 pl-9 pr-10 rounded-md border border-[#8A8B82]/30 bg-[#1E201E] px-3 py-2 text-sm text-[#D9DADF] placeholder:text-[#8A8B82]/60 focus:outline-none focus:ring-2 focus:ring-[#DD700B] disabled:opacity-50"
                       />
                     </div>
                   </div>
@@ -532,17 +565,34 @@ export default function LoginPage() {
 
                   {/* Password */}
                   <div className="flex flex-col gap-1.5">
-                    <label
-                      htmlFor="regPassword"
-                      className="block text-xs font-semibold uppercase tracking-wider text-[#8A8B82]"
-                    >
-                      Password (min 6 chars)
-                    </label>
+                    <div className="flex items-center justify-between">
+                      <label
+                        htmlFor="regPassword"
+                        className="block text-xs font-semibold uppercase tracking-wider text-[#8A8B82]"
+                      >
+                        Password (min 6 chars)
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="text-xs text-[#8A8B82] hover:text-[#DD700B] flex items-center gap-1 transition-colors"
+                      >
+                        {showPassword ? (
+                          <>
+                            <EyeOff className="w-3.5 h-3.5" /> <span>Hide</span>
+                          </>
+                        ) : (
+                          <>
+                            <Eye className="w-3.5 h-3.5" /> <span>Show</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
                     <div className="relative">
                       <Lock className="w-4 h-4 text-[#8A8B82] absolute left-3 top-3 pointer-events-none" />
                       <input
                         id="regPassword"
-                        type="password"
+                        type={showPassword ? "text" : "password"}
                         placeholder="••••••••••••"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
@@ -550,7 +600,7 @@ export default function LoginPage() {
                         required
                         minLength={6}
                         autoComplete="new-password"
-                        className="block w-full h-10 pl-9 rounded-md border border-[#8A8B82]/30 bg-[#1E201E] px-3 py-2 text-sm text-[#D9DADF] placeholder:text-[#8A8B82]/60 focus:outline-none focus:ring-2 focus:ring-[#DD700B] disabled:opacity-50"
+                        className="block w-full h-10 pl-9 pr-10 rounded-md border border-[#8A8B82]/30 bg-[#1E201E] px-3 py-2 text-sm text-[#D9DADF] placeholder:text-[#8A8B82]/60 focus:outline-none focus:ring-2 focus:ring-[#DD700B] disabled:opacity-50"
                       />
                     </div>
                   </div>
@@ -567,7 +617,7 @@ export default function LoginPage() {
                       <Lock className="w-4 h-4 text-[#8A8B82] absolute left-3 top-3 pointer-events-none" />
                       <input
                         id="confirmPassword"
-                        type="password"
+                        type={showPassword ? "text" : "password"}
                         placeholder="••••••••••••"
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
@@ -575,7 +625,7 @@ export default function LoginPage() {
                         required
                         minLength={6}
                         autoComplete="new-password"
-                        className="block w-full h-10 pl-9 rounded-md border border-[#8A8B82]/30 bg-[#1E201E] px-3 py-2 text-sm text-[#D9DADF] placeholder:text-[#8A8B82]/60 focus:outline-none focus:ring-2 focus:ring-[#DD700B] disabled:opacity-50"
+                        className="block w-full h-10 pl-9 pr-10 rounded-md border border-[#8A8B82]/30 bg-[#1E201E] px-3 py-2 text-sm text-[#D9DADF] placeholder:text-[#8A8B82]/60 focus:outline-none focus:ring-2 focus:ring-[#DD700B] disabled:opacity-50"
                       />
                     </div>
                   </div>
