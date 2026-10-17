@@ -75,6 +75,62 @@ async def get_public_job(job_id: str) -> JobPublicResponse:
     )
 
 
+@router.get(
+    "/jobs",
+    response_model=list[JobPublicResponse],
+    dependencies=[Depends(rate_limit_public)],
+    summary="List active public jobs",
+)
+async def list_public_jobs(search: Optional[str] = None) -> list[JobPublicResponse]:
+    """
+    Returns list of open public jobs. Never exposes internal rubric, owner_id, or scoring criteria.
+    """
+    try:
+        client = get_supabase_service_client()
+        query = (
+            client.table("jobs")
+            .select("id, title, description, skills, deadline, status, created_at")
+            .eq("status", "open")
+            .order("created_at", desc=True)
+        )
+        res = query.execute()
+        jobs: list[JobPublicResponse] = []
+        now = datetime.now(timezone.utc)
+        for row in res.data or []:
+            try:
+                deadline_dt = _parse_iso_datetime(row["deadline"])
+                job_status = "closed" if deadline_dt <= now else str(row.get("status", "open"))
+            except Exception:
+                job_status = str(row.get("status", "open"))
+
+            if job_status == "closed":
+                continue
+
+            if search:
+                s_lower = search.strip().lower()
+                title_match = s_lower in (row.get("title") or "").lower()
+                desc_match = s_lower in (row.get("description") or "").lower()
+                skills_match = any(s_lower in str(k).lower() for k in (row.get("skills") or []))
+                if not (title_match or desc_match or skills_match):
+                    continue
+
+            jobs.append(
+                JobPublicResponse(
+                    id=str(row["id"]),
+                    title=row.get("title", ""),
+                    description=row.get("description", ""),
+                    skills=row.get("skills") or [],
+                    deadline=row["deadline"],
+                    status=job_status,
+                )
+            )
+        return jobs
+    except Exception as e:
+        logger.warning(f"Error fetching public jobs: {e}")
+        return []
+
+
+
 async def _handle_application_submission(
     job_id: str,
     name: str,

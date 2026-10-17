@@ -102,9 +102,19 @@ async def get_hr_user(credentials: Optional[HTTPAuthorizationCredentials] = Depe
     # Check if user has an admin role
     try:
         r_res = db.table("user_roles").select("role").eq("user_id", user_id).execute()
-        user_role = r_res.data[0].get("role") if (r_res and r_res.data) else "hr"
+        user_role = r_res.data[0].get("role") if (r_res and r_res.data) else None
     except Exception:
-        user_role = "hr"
+        user_role = None
+
+    metadata_role = (data.get("user_metadata") or {}).get("role")
+    if not user_role:
+        user_role = metadata_role or "candidate"
+
+    if user_role == "candidate":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: Candidate account does not have access to Recruiter endpoints",
+        )
 
     if user_role == "admin":
         hr_user = HRUser(id=user_id, email=email, role="admin")
@@ -225,16 +235,34 @@ async def get_current_user_profile(
     role_res = db.table("user_roles").select("*").eq("user_id", user_id).execute()
     role_row = role_res.data[0] if (role_res and role_res.data) else {}
 
-    role = role_row.get("role", "hr")
+    db_role = role_row.get("role")
+    user_meta = data.get("user_metadata") or {}
+    metadata_role = user_meta.get("role")
+
+    if db_role:
+        role = db_role
+    elif metadata_role:
+        role = metadata_role
+    else:
+        # Check if an HR profile exists for this user
+        try:
+            hp_res = db.table("hr_profiles").select("id").eq("user_id", user_id).execute()
+            if hp_res and hp_res.data:
+                role = "hr"
+            else:
+                role = "candidate"
+        except Exception:
+            role = "candidate"
+
     must_change = bool(role_row.get("must_change_password", False))
 
-    # HR Profile lookup / sync (only for non-admin HR accounts)
+    # HR Profile lookup / sync (ONLY for genuine HR accounts)
     hr_profile_data: Optional[Dict[str, Any]] = None
-    if role != "admin":
+    if role == "hr":
         hr_profile_data = {
             "contact_email": email,
             "organization": "",
-            "full_name": "",
+            "full_name": user_meta.get("full_name", ""),
             "job_title": "",
             "reply_to_enabled": True,
             "status": "active",
@@ -256,6 +284,7 @@ async def get_current_user_profile(
                 db.table("hr_profiles").insert({
                     "user_id": user_id,
                     "contact_email": email,
+                    "full_name": user_meta.get("full_name", "Recruiter"),
                 }).execute()
         except Exception:
             pass
