@@ -1231,6 +1231,16 @@ async def override_candidate_status(
 
     previous_status = str(candidate.get("status") or "applied")
 
+    if target_status == "invited":
+        return await invite_candidate_with_token(
+            candidate=candidate,
+            job=job_row,
+            actor=current_user.id,
+            reason=clean_reason,
+            send_email=True,
+            hr_sender_email=current_user.email,
+        )
+
     client.table("candidates").update({
         "status": target_status,
         "hr_notes": clean_reason,

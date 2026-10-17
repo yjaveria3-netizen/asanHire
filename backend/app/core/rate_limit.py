@@ -13,27 +13,27 @@ logger = logging.getLogger("asanhire.ratelimit")
 def get_client_ip(request: Request) -> str:
     """
     Resolves client IP.
-    Honors X-Forwarded-For ONLY when the direct client is a configured trusted proxy.
-    Otherwise defaults to request.client.host.
+    Honors X-Forwarded-For and X-Real-IP for cloud deployments (Render, Vercel, Railway).
+    Defaults to request.client.host.
     """
-    trusted_proxies: List[str] = [
-        p.strip() for p in (settings.TRUSTED_PROXIES or "").split(",") if p.strip()
-    ]
-    direct_ip = request.client.host if request.client else "127.0.0.1"
-
     forwarded = request.headers.get("x-forwarded-for")
-    if forwarded and trusted_proxies and direct_ip in trusted_proxies:
+    if forwarded:
         client_ip = forwarded.split(",")[0].strip()
-        return client_ip
+        if client_ip:
+            return client_ip
 
-    return direct_ip
+    real_ip = request.headers.get("x-real-ip")
+    if real_ip and real_ip.strip():
+        return real_ip.strip()
+
+    return request.client.host if request.client else "127.0.0.1"
 
 # Initialize slowapi Limiter
 limiter = Limiter(key_func=get_client_ip)
 
-_public_limit_item = parse("10/minute")
-_interview_limit_item = parse("10/minute")
-_hr_limit_item = parse("60/minute")
+_public_limit_item = parse("120/minute")
+_interview_limit_item = parse("60/minute")
+_hr_limit_item = parse("120/minute")
 
 _public_limit = Limit(_public_limit_item, key_func=lambda: "ip", scope="public", per_method=False, methods=None, error_message="Too many requests. Please try again later.", exempt_when=None, cost=1, override_defaults=True)
 _interview_limit = Limit(_interview_limit_item, key_func=lambda: "ip", scope="interview", per_method=False, methods=None, error_message="Too many requests. Please try again later.", exempt_when=None, cost=1, override_defaults=True)

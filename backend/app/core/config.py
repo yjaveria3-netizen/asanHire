@@ -77,7 +77,10 @@ class Settings(BaseSettings):
 
     @property
     def is_production(self) -> bool:
-        return self.APP_ENV.lower() in ("prod", "production")
+        env = (self.APP_ENV or "").strip().lower()
+        is_prod_env = env in ("prod", "production")
+        is_cloud_prod = bool(os.getenv("RENDER")) or bool(os.getenv("VERCEL"))
+        return is_prod_env or is_cloud_prod
 
     def check_required_env(self) -> List[str]:
         """

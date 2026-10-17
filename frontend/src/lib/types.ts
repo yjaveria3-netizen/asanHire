@@ -247,3 +247,16 @@ export interface HRAccessRequest {
   reviewed_at?: string;
   reviewed_by?: string;
 }
+
+export interface CandidateApplication {
+  id: string;
+  job_id: string;
+  job_title: string;
+  department?: string;
+  status: string;
+  applied_at?: string;
+  interview_id?: string;
+  interview_url?: string;
+  interview_status?: string;
+  interview_expires_at?: string;
+}

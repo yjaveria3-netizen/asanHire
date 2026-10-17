@@ -1,17 +1,37 @@
-import { Job, Candidate, JobProgress, DeletePreview, HROverrideEvent, AdminOverview, AdminHRUser, AdminCandidateLookupResult, HRAccessRequest } from "./types";
+import {
+  Job,
+  Candidate,
+  JobProgress,
+  DeletePreview,
+  HROverrideEvent,
+  AdminOverview,
+  AdminHRUser,
+  AdminCandidateLookupResult,
+  HRAccessRequest,
+  CandidateApplication,
+} from "./types";
 import { createClient } from "./supabase/client";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+let cachedAuthHeader: { header: Record<string, string>; expiresAt: number } | null = null;
+
 async function getAuthHeader(): Promise<Record<string, string>> {
   if (typeof window === "undefined") return {};
+  const now = Date.now();
+  if (cachedAuthHeader && cachedAuthHeader.expiresAt > now) {
+    return cachedAuthHeader.header;
+  }
   try {
     const supabase = createClient();
     const {
       data: { session },
     } = await supabase.auth.getSession();
     if (session?.access_token) {
-      return { Authorization: `Bearer ${session.access_token}` };
+      const header = { Authorization: `Bearer ${session.access_token}` };
+      // Cache token for 15s to eliminate redundant async auth overhead
+      cachedAuthHeader = { header, expiresAt: now + 15000 };
+      return header;
     }
   } catch {}
   return {};
@@ -66,6 +86,13 @@ export const api = {
       .catch(() => ({ has_interview: false }));
   },
 
+  getCandidateApplications: async (email: string): Promise<CandidateApplication[]> => {
+    const qs = `?email=${encodeURIComponent(email)}`;
+    return request<CandidateApplication[]>(`/public/candidate/applications${qs}`)
+      .catch(() => request<CandidateApplication[]>(`/api/public/candidate/applications${qs}`))
+      .catch(() => []);
+  },
+
   getPublicJob: async (jobId: string): Promise<Job> => {
     return request<Job>(`/api/public/jobs/${jobId}`).catch(() => ({
       id: jobId,
@@ -110,9 +137,9 @@ export const api = {
       .catch(() => request<any>(`/api/interview/${token}/verify`))
       .catch(() => ({
         valid: true,
-        interview_id: "demo-interview-101",
-        candidate_name: "Amina Malik",
-        job_title: "Senior AI / Full-Stack Engineer",
+        interview_id: token,
+        candidate_name: "Candidate",
+        job_title: "Technical Role",
         status: "pending",
         expires_at: new Date(Date.now() + 86400000).toISOString(),
       }));
@@ -126,14 +153,14 @@ export const api = {
     return request<any>(`/interview/${token}/start`, { method: "POST" })
       .catch(() => request<any>(`/api/interview/${token}/start`, { method: "POST" }))
       .catch(() => ({
-        interview_id: "demo-interview-101",
-        candidate_name: "Amina Malik",
-        job_title: "Senior AI / Full-Stack Engineer",
+        interview_id: token,
+        candidate_name: "Candidate",
+        job_title: "Technical Role",
         status: "in_progress",
         initial_question:
-          "Welcome to your technical screening for the Senior AI / Full-Stack Engineer role. To begin, could you introduce yourself and describe a complex system where you integrated Next.js with background AI agents?",
+          "Welcome to your technical screening. To begin, could you introduce yourself and walk us through your most recent technical project?",
         spoken_text:
-          "Welcome to your technical screening for the Senior AI / Full-Stack Engineer role. To begin, could you introduce yourself and describe a complex system where you integrated Next.js with background AI agents?",
+          "Welcome to your technical screening. To begin, could you introduce yourself and walk us through your most recent technical project?",
         question_index: 1,
         total_questions: 5,
       }));
@@ -351,9 +378,9 @@ export const api = {
     return request<Candidate>(`/api/hr/candidates/${candidateId}`).catch(() => ({
       id: candidateId,
       job_id: "11111111-1111-1111-1111-111111111111",
-      full_name: "Amina Malik",
-      email: "amina.malik@example.com",
-      phone: "+1 555-0192",
+      full_name: "Candidate",
+      email: "candidate@example.com",
+      phone: "+1 555-0100",
       status: "shortlisted",
       resume_score: 92,
       effective_score: 92,

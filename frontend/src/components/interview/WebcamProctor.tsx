@@ -25,6 +25,7 @@ export const WebcamProctor: React.FC<WebcamProctorProps> = ({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const checkIntervalRef = useRef<any>(null);
+  const previousLuminanceRef = useRef<Uint8Array | null>(null);
 
   // Initialize Camera Stream
   const startCamera = useCallback(async () => {
@@ -152,7 +153,7 @@ export const WebcamProctor: React.FC<WebcamProctorProps> = ({
       }
     }
 
-    // Tier 2: Spatial Pixel Centroid & Reticle Density Analysis
+  // Tier 2: YCbCr Chrominance & Spatial Center-Concentration Analysis
     const ctx = canvas.getContext("2d", { willReadFrequently: true });
     if (!ctx) return;
 
@@ -163,8 +164,8 @@ export const WebcamProctor: React.FC<WebcamProctorProps> = ({
     const data = frame.data;
 
     // Center oval reticle bounds (center is x=40, y=30)
-    const minX = 24;
-    const maxX = 56;
+    const minX = 26;
+    const maxX = 54;
     const minY = 12;
     const maxY = 48;
     const reticleArea = (maxX - minX) * (maxY - minY);
@@ -172,50 +173,72 @@ export const WebcamProctor: React.FC<WebcamProctorProps> = ({
     let reticleSkinPixels = 0;
     let totalLuminance = 0;
     let totalSkinPixels = 0;
+    let centerSkinPixels = 0;
     let sumX = 0;
     let sumY = 0;
     let leftSkin = 0;
     let rightSkin = 0;
+    let motionPixelCount = 0;
+
+    const currentLum = new Uint8Array(width * height);
+    const prevLum = previousLuminanceRef.current;
 
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
-        const idx = (y * width + x) * 4;
+        const pIdx = y * width + x;
+        const idx = pIdx * 4;
         const r = data[idx];
         const g = data[idx + 1];
         const b = data[idx + 2];
 
         const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+        currentLum[pIdx] = lum;
         totalLuminance += lum;
 
-        // Accurate skin tone filter across all complexions
+        // Motion analysis: compare with previous frame
+        if (prevLum) {
+          const delta = Math.abs(lum - prevLum[pIdx]);
+          if (delta > 24) motionPixelCount++;
+        }
+
+        // Standard YCbCr Human Skin Chrominance Filter
+        // Distinguishes genuine human skin from beige walls, wood, and fabrics
+        const cb = 128 - 0.168736 * r - 0.331264 * g + 0.5 * b;
+        const cr = 128 + 0.5 * r - 0.418688 * g - 0.081312 * b;
+
         const isSkin =
-          r > 48 &&
-          g > 32 &&
-          b > 18 &&
-          r > b &&
-          (r - g >= 6 || Math.abs(r - g) <= 15) &&
-          Math.max(r, g, b) - Math.min(r, g, b) > 10;
+          cb >= 77 &&
+          cb <= 127 &&
+          cr >= 133 &&
+          cr <= 173 &&
+          r > g &&
+          r - g >= 6 &&
+          r > 42;
 
         if (isSkin) {
           totalSkinPixels++;
           sumX += x;
           sumY += y;
-          if (x < width * 0.35) leftSkin++;
-          if (x > width * 0.65) rightSkin++;
+          if (x < minX) leftSkin++;
+          if (x > maxX) rightSkin++;
 
-          if (x >= minX && x < maxX && y >= minY && y < maxY) {
-            reticleSkinPixels++;
+          if (x >= minX && x <= maxX) {
+            centerSkinPixels++;
+            if (y >= minY && y <= maxY) {
+              reticleSkinPixels++;
+            }
           }
         }
       }
     }
 
+    previousLuminanceRef.current = currentLum;
+
     const avgLuminance = totalLuminance / (width * height);
     const reticleSkinRatio = reticleSkinPixels / reticleArea;
-    const overallSkinRatio = totalSkinPixels / (width * height);
 
-    // If completely dark (< 22) or overexposed (> 245), face is not detected
-    if (avgLuminance < 22 || avgLuminance > 245 || totalSkinPixels < 40) {
+    // 1. Check lighting and camera visibility
+    if (avgLuminance < 20 || avgLuminance > 245 || totalSkinPixels < 35) {
       setFaceCount(0);
       setStatus("no_face");
       if (isInterviewActive && onEvent) {
@@ -224,8 +247,8 @@ export const WebcamProctor: React.FC<WebcamProctorProps> = ({
       return;
     }
 
-    // Multiple faces heuristic: two distinct high skin clusters on opposite sides
-    if (overallSkinRatio > 0.22 && leftSkin > totalSkinPixels * 0.4 && rightSkin > totalSkinPixels * 0.4) {
+    // 2. Multiple people in frame: distinct high skin clusters on far left AND far right
+    if (leftSkin > 40 && rightSkin > 40 && centerSkinPixels < 20) {
       setFaceCount(2);
       setStatus("multiple_faces");
       if (isInterviewActive && onEvent) {
@@ -234,27 +257,38 @@ export const WebcamProctor: React.FC<WebcamProctorProps> = ({
       return;
     }
 
+    // 3. Movement / phone / foreign object disturbance check
+    const motionRatio = motionPixelCount / (width * height);
+    if (motionRatio > 0.30) {
+      // Rapid motion / camera being shifted or phone placed in front
+      setStatus("unaligned");
+      return;
+    }
+
     const centroidX = sumX / totalSkinPixels;
     const centroidY = sumY / totalSkinPixels;
+    const centerConcentration = centerSkinPixels / totalSkinPixels;
 
-    // Centered face verification:
-    // 1. Centroid must be centered (x between 28 and 52, y between 16 and 44)
-    // 2. Reticle skin density must be >= 16%
-    const isCentroidCentered = centroidX >= 28 && centroidX <= 52 && centroidY >= 16 && centroidY <= 44;
-    const hasReticleDensity = reticleSkinRatio >= 0.16;
+    // 4. Strict Alignment Check:
+    // Face must be physically centered:
+    // - Centroid X must be in [30..50] (center is 40)
+    // - Centroid Y must be in [16..44] (center is 30)
+    // - At least 50% of the candidate's skin pixels must be located inside the center column!
+    // - The reticle must have positive skin density
+    const isHorizontallyCentered = centroidX >= 30 && centroidX <= 50;
+    const isVerticallyCentered = centroidY >= 14 && centroidY <= 46;
+    const isConcentratedInCenter = centerConcentration >= 0.50;
+    const hasReticleDensity = reticleSkinRatio >= 0.12;
 
-    if (isCentroidCentered && hasReticleDensity) {
+    if (isHorizontallyCentered && isVerticallyCentered && isConcentratedInCenter && hasReticleDensity) {
       setFaceCount(1);
       setStatus("centered");
-    } else if (overallSkinRatio >= 0.05) {
-      // Face is in frame but not aligned inside the center oval
+    } else {
+      // Face exists in frame but candidate is tilted or shifted off to the side (e.g. right/left)
       setFaceCount(1);
       setStatus("unaligned");
-    } else {
-      setFaceCount(0);
-      setStatus("no_face");
       if (isInterviewActive && onEvent) {
-        onEvent("no_face", 5, "Candidate face not aligned within center reticle");
+        onEvent("unaligned", 2, "Candidate face not aligned within center reticle");
       }
     }
   }, [hasCameraAccess, isInterviewActive, onEvent]);
@@ -270,7 +304,7 @@ export const WebcamProctor: React.FC<WebcamProctorProps> = ({
 
   useEffect(() => {
     if (hasCameraAccess) {
-      checkIntervalRef.current = setInterval(analyzeFrame, 1200);
+      checkIntervalRef.current = setInterval(analyzeFrame, 800);
     }
 
     return () => {

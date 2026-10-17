@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { api } from "@/lib/api";
-import { Job } from "@/lib/types";
+import { Job, CandidateApplication } from "@/lib/types";
 import { Logo } from "@/components/brand/Logo";
 import { NeuBadge } from "@/components/neu/NeuBadge";
 import {
@@ -24,6 +24,10 @@ import {
   KeyRound,
   CheckCircle2,
   ExternalLink,
+  Clock,
+  FileText,
+  CheckCheck,
+  Loader2,
 } from "lucide-react";
 
 export default function CandidateJobsPortal() {
@@ -48,12 +52,15 @@ export default function CandidateJobsPortal() {
     expires_at?: string;
     interview_url?: string;
   } | null>(null);
+  const [myApplications, setMyApplications] = useState<CandidateApplication[]>([]);
+  const [loadingApplications, setLoadingApplications] = useState(false);
 
   useEffect(() => {
-    // 1. Fetch current user session
+    // 1. Fetch current user session quickly from local storage
     const supabase = createClient();
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        const user = session.user;
         const meta = user.user_metadata || {};
         const email = user.email || "";
         setCurrentUser({
@@ -62,18 +69,29 @@ export default function CandidateJobsPortal() {
           full_name: meta.full_name || email.split("@")[0] || "Candidate",
         });
 
-        // 2. Check for active interview invitation for this candidate email
         if (email) {
-          api.getCandidateActiveInterview(email).then((res) => {
-            if (res && res.has_interview) {
-              setActiveInterview(res);
-            }
-          }).catch(() => {});
+          // 2. Fetch all applied jobs and status
+          setLoadingApplications(true);
+          api.getCandidateApplications(email)
+            .then((apps) => {
+              setMyApplications(apps || []);
+            })
+            .catch(() => {})
+            .finally(() => setLoadingApplications(false));
+
+          // 3. Check for active interview invitation for this candidate email
+          api.getCandidateActiveInterview(email)
+            .then((res) => {
+              if (res && res.has_interview) {
+                setActiveInterview(res);
+              }
+            })
+            .catch(() => {});
         }
       }
-    });
+    }).catch(() => {});
 
-    // 3. Fetch active public jobs
+    // 4. Fetch real active public jobs
     fetchJobs();
   }, []);
 
@@ -81,23 +99,7 @@ export default function CandidateJobsPortal() {
     setLoading(true);
     try {
       const data = await api.getPublicJobs();
-      if (data && Array.isArray(data) && data.length > 0) {
-        setJobs(data);
-      } else {
-        setJobs([
-          {
-            id: "junior-python-backend-engineer",
-            title: "Junior Python Backend Engineer",
-            department: "Engineering & Platform",
-            description:
-              "Build scalable asynchronous microservices, FastAPI REST APIs, LLM rubric evaluators, and proctored automated interview pipelines using Python, FastAPI, and PostgreSQL.",
-            requirements: "Experience with Python, FastAPI, relational databases, Docker, and REST APIs.",
-            skills: ["Python", "FastAPI", "PostgreSQL", "Docker", "REST APIs"],
-            deadline: new Date(Date.now() + 86400000 * 7).toISOString(),
-            status: "open",
-          },
-        ]);
-      }
+      setJobs(Array.isArray(data) ? data : []);
     } catch {
       setJobs([]);
     } finally {
@@ -139,6 +141,66 @@ export default function CandidateJobsPortal() {
 
     return matchesSearch && matchesTag;
   });
+
+  const renderStatusBadge = (status: string) => {
+    const st = (status || "").toLowerCase();
+    switch (st) {
+      case "applied":
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/15 text-amber-400 border border-amber-500/30">
+            <Clock className="w-3.5 h-3.5" />
+            <span>Applied • Under Review</span>
+          </span>
+        );
+      case "shortlisted":
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Shortlisted • High Match</span>
+          </span>
+        );
+      case "invited":
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-[#DD700B]/20 text-[#DD700B] border border-[#DD700B]/40 animate-pulse">
+            <Video className="w-3.5 h-3.5" />
+            <span>Invited • Interview Ready</span>
+          </span>
+        );
+      case "interviewing":
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-500/15 text-blue-400 border border-blue-500/30">
+            <Video className="w-3.5 h-3.5" />
+            <span>Interview in Progress</span>
+          </span>
+        );
+      case "interviewed":
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-500/15 text-purple-400 border border-purple-500/30">
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            <span>Interview Completed • Evaluating</span>
+          </span>
+        );
+      case "hired":
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-green-500/20 text-green-400 border border-green-500/40">
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            <span>Offer Extended • Hired</span>
+          </span>
+        );
+      case "rejected":
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-[#2A2D2A] text-[#8A8B82] border border-[rgba(217,218,223,0.1)]">
+            <span>Application Closed</span>
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-[#242724] text-[#D9DADF] border border-[rgba(217,218,223,0.1)]">
+            <span className="capitalize">{status}</span>
+          </span>
+        );
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#1E201E] text-[#D9DADF] flex flex-col font-sans selection:bg-[#DD700B] selection:text-[#1E201E]">
@@ -238,6 +300,87 @@ export default function CandidateJobsPortal() {
                 </Link>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* MY SUBMITTED APPLICATIONS DASHBOARD (When Signed In) */}
+        {currentUser && (myApplications.length > 0 || loadingApplications) && (
+          <div className="rounded-2xl border border-[#383A38] bg-[#242724] p-6 sm:p-8 shadow-xl space-y-5 animate-fade-in">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#383A38] pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#1E201E] border border-[#383A38] flex items-center justify-center text-[#DD700B]">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-[#D9DADF] flex items-center gap-2">
+                    <span>My Applications &amp; Status</span>
+                    <span className="px-2 py-0.5 rounded-full text-xs bg-[#1E201E] text-[#DD700B] border border-[#383A38] font-mono">
+                      {myApplications.length}
+                    </span>
+                  </h2>
+                  <p className="text-xs text-[#8A8B82]">
+                    Real-time status tracking for your submitted candidate applications
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {loadingApplications ? (
+              <div className="flex items-center justify-center py-6 text-xs text-[#8A8B82] gap-2">
+                <Loader2 className="w-4 h-4 animate-spin text-[#DD700B]" />
+                <span>Loading your application history...</span>
+              </div>
+            ) : myApplications.length === 0 ? (
+              <p className="text-xs text-[#8A8B82] py-2">
+                You haven&apos;t submitted any applications yet. Browse the open positions below and apply!
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {myApplications.map((app) => (
+                  <div
+                    key={app.id}
+                    className="p-4 rounded-xl bg-[#1E201E] border border-[#383A38] flex flex-col justify-between gap-3 hover:border-[#DD700B]/40 transition-all"
+                  >
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <span className="text-[11px] font-mono text-[#DD700B] bg-[#242724] px-2 py-0.5 rounded border border-[#383A38]">
+                          {app.department || "Engineering"}
+                        </span>
+                        {renderStatusBadge(app.status)}
+                      </div>
+                      <h3 className="text-base font-bold text-[#D9DADF]">
+                        {app.job_title}
+                      </h3>
+                      {app.applied_at && (
+                        <p className="text-[11px] text-[#8A8B82] flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-[#8A8B82]" />
+                          <span>Submitted on {new Date(app.applied_at).toLocaleDateString()}</span>
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="pt-2 border-t border-[#383A38]/60 flex items-center justify-between gap-2 flex-wrap">
+                      <Link
+                        href={`/jobs/${app.job_id}`}
+                        className="text-xs text-[#8A8B82] hover:text-[#D9DADF] transition-colors"
+                      >
+                        View Job Details &rarr;
+                      </Link>
+
+                      {(app.status === "invited" || app.interview_id || app.interview_url) && (
+                        <Link
+                          href={app.interview_url || `/interview/${app.interview_id}`}
+                          className="px-3 py-1.5 rounded-lg bg-[#DD700B] hover:bg-[#C25E06] text-white font-bold text-xs flex items-center gap-1.5 shadow-sm"
+                        >
+                          <Video className="w-3.5 h-3.5" />
+                          <span>Launch Screening</span>
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -371,6 +514,7 @@ export default function CandidateJobsPortal() {
             {filteredJobs.map((job) => {
               const deadlineDate = job.deadline ? new Date(job.deadline) : null;
               const isDeadlineValid = deadlineDate && !isNaN(deadlineDate.getTime());
+              const appliedApp = myApplications.find((a) => a.job_id === job.id);
 
               return (
                 <div
@@ -389,9 +533,16 @@ export default function CandidateJobsPortal() {
                           {job.title}
                         </h2>
                       </div>
-                      <span className="shrink-0 px-2.5 py-1 bg-[#8FD19E]/15 text-[#8FD19E] border border-[#8FD19E]/30 rounded-full text-[11px] font-bold uppercase tracking-wider">
-                        Active
-                      </span>
+                      <div className="flex flex-col items-end gap-1.5 shrink-0">
+                        <span className="px-2.5 py-1 bg-[#8FD19E]/15 text-[#8FD19E] border border-[#8FD19E]/30 rounded-full text-[11px] font-bold uppercase tracking-wider">
+                          Active
+                        </span>
+                        {appliedApp && (
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#DD700B]/20 text-[#DD700B] border border-[#DD700B]/40 flex items-center gap-1">
+                            <CheckCheck className="w-3 h-3" /> Applied ({appliedApp.status})
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     {/* Description */}
@@ -434,7 +585,7 @@ export default function CandidateJobsPortal() {
                       href={`/jobs/${job.id}`}
                       className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#DD700B] hover:bg-[#C25E06] text-white font-bold text-xs rounded-xl transition-all shadow-sm group-hover:translate-x-0.5"
                     >
-                      <span>View & Apply</span>
+                      <span>{appliedApp ? "View Application" : "View & Apply"}</span>
                       <ArrowRight className="w-3.5 h-3.5" />
                     </Link>
                   </div>

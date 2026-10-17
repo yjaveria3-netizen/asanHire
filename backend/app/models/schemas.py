@@ -234,9 +234,26 @@ class JobPublicResponse(BaseModel):
     id: str
     title: str
     description: str
+    department: Optional[str] = "General"
     skills: List[str] = Field(default_factory=list)
+    experience_level: Optional[str] = None
+    requirements: Optional[str] = None
     deadline: datetime
     status: str
+    created_at: Optional[datetime] = None
+
+
+class CandidateApplicationItem(BaseModel):
+    id: str
+    job_id: str
+    job_title: str
+    department: Optional[str] = "General"
+    status: str
+    applied_at: Optional[datetime] = None
+    interview_id: Optional[str] = None
+    interview_url: Optional[str] = None
+    interview_status: Optional[str] = None
+    interview_expires_at: Optional[datetime] = None
 
 
 class ApplicationSubmitResponse(BaseModel):
