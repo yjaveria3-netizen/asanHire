@@ -49,8 +49,8 @@ export const FullscreenGate: React.FC<FullscreenGateProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1E201E]/95 backdrop-blur-md">
-      <div className="neu-raised max-w-xl w-full rounded-2xl p-8 border border-[#D9DADF]/15 flex flex-col gap-6 text-center">
+    <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-3 sm:p-6 bg-[#1E201E]/95 backdrop-blur-md">
+      <div className="neu-raised max-w-xl w-full max-h-[92vh] overflow-y-auto rounded-2xl p-5 sm:p-7 border border-[#D9DADF]/15 flex flex-col gap-4 sm:gap-5 text-center my-auto">
         {/* Centered Logo */}
         <div className="flex justify-center">
           <Logo variant="mark" size="xl" href={null} priority />

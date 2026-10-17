@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { api } from "@/lib/api";
 import { AdminCandidateLookupResult } from "@/lib/types";
 import { NeuCard } from "@/components/neu/NeuCard";
@@ -16,6 +17,7 @@ import {
   Mail,
   Lock,
   Briefcase,
+  ArrowLeft,
 } from "lucide-react";
 
 export default function AdminCandidateLookupPage() {
@@ -46,13 +48,24 @@ export default function AdminCandidateLookupPage() {
 
   return (
     <div className="flex flex-col gap-6 max-w-5xl mx-auto pb-16">
+      {/* Back to Admin Overview */}
+      <div>
+        <Link
+          href="/admin/overview"
+          className="inline-flex items-center gap-2 text-sm text-[#8A8B82] hover:text-[#DD700B] transition-colors py-1 px-2 -ml-2 rounded-lg hover:bg-[#242724]"
+        >
+          <ArrowLeft className="w-4 h-4 text-[#DD700B]" />
+          <span>Back to Admin Overview</span>
+        </Link>
+      </div>
+
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-[#D9DADF] flex items-center gap-2.5">
-          <Search className="w-6 h-6 text-[#DD700B]" />
+        <h1 className="text-2xl sm:text-3xl font-bold text-[#D9DADF] flex items-center gap-2.5">
+          <Search className="w-7 h-7 text-[#DD700B]" />
           Platform Candidate Lookup
         </h1>
-        <p className="text-xs text-[#8A8B82] mt-1">
+        <p className="text-sm text-[#8A8B82] mt-1.5 leading-relaxed">
           Verify candidate application records, platform status, and blocked email registries across all organizations.
         </p>
       </div>

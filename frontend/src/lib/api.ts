@@ -643,9 +643,16 @@ export const api = {
 
   getAdminOverrides: async (params?: Record<string, string>): Promise<HROverrideEvent[]> => {
     const qs = params ? "?" + new URLSearchParams(params).toString() : "";
-    return request<HROverrideEvent[]>(`/admin/overrides${qs}`)
-      .catch(() => request<HROverrideEvent[]>(`/api/admin/overrides${qs}`))
-      .catch(() => []);
+    try {
+      const res = await request<any>(`/admin/overrides${qs}`).catch(() =>
+        request<any>(`/api/admin/overrides${qs}`)
+      );
+      if (Array.isArray(res)) return res;
+      if (res && Array.isArray(res.overrides)) return res.overrides;
+      return [];
+    } catch {
+      return [];
+    }
   },
 
   reviewAdminOverride: async (overrideId: string): Promise<any> => {

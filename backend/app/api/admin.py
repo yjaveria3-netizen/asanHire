@@ -240,7 +240,7 @@ async def get_platform_overview(
         hr_res = client.table("user_roles").select("id").eq("role", "hr").execute()
         hr_users_count = len(hr_res.data or [])
         if hr_users_count == 0:
-            prof_res = client.table("hr_profiles").select("id").execute()
+            prof_res = client.table("hr_profiles").select("user_id").execute()
             hr_users_count = len(prof_res.data or [])
     except Exception:
         pass
@@ -403,7 +403,7 @@ async def list_hr_users(
 
     hr_items: List[AdminHRUserItem] = []
     for p in profiles:
-        uid = str(p.get("id"))
+        uid = str(p.get("user_id") or p.get("id"))
         user_jobs = jobs_by_user.get(uid, [])
         user_candidates = []
         for jid in user_jobs:
@@ -457,7 +457,12 @@ async def get_hr_user_detail(
 ) -> AdminHRUserDetailResponse:
     _assert_password_not_locked(current_user)
     client = get_supabase_service_client()
-    p_res = client.table("hr_profiles").select("*").eq("id", hr_user_id).execute()
+    try:
+        p_res = client.table("hr_profiles").select("*").eq("user_id", hr_user_id).execute()
+        if not p_res.data:
+            p_res = client.table("hr_profiles").select("*").eq("id", hr_user_id).execute()
+    except Exception:
+        p_res = client.table("hr_profiles").select("*").eq("user_id", hr_user_id).execute()
     if not p_res.data:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="HR user not found")
     profile = p_res.data[0]
@@ -708,9 +713,14 @@ async def get_candidate_admin_summary(
     ]
     orgs_map: Dict[str, str] = {}
     if hr_ids:
-        p_res = client.table("hr_profiles").select("id, organization").in_("id", hr_ids).execute()
-        for p in (p_res.data or []):
-            orgs_map[str(p["id"])] = str(p.get("organization") or "")
+        try:
+            p_res = client.table("hr_profiles").select("user_id, organization").in_("user_id", hr_ids).execute()
+            for p in (p_res.data or []):
+                uid = str(p.get("user_id") or "")
+                if uid:
+                    orgs_map[uid] = str(p.get("organization") or "")
+        except Exception:
+            pass
 
     # Check completed interviews
     cand_ids = [str(c["id"]) for c in cands]
@@ -967,7 +977,7 @@ async def ask_override_question(
 
     # Dispatch email notification to HR user's login email
     try:
-        prof_res = client.table("hr_profiles").select("contact_email, full_name").eq("id", hr_uid).execute()
+        prof_res = client.table("hr_profiles").select("contact_email, full_name").eq("user_id", hr_uid).execute()
         if prof_res and prof_res.data:
             hr_email = prof_res.data[0].get("contact_email")
             if hr_email and "@" in hr_email:
