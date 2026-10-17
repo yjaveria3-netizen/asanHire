@@ -69,7 +69,13 @@ export default function HRDashboardPage() {
     } catch {
       // Handled silently
     } finally {
-      router.push("/login");
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.clear();
+          sessionStorage.clear();
+        } catch {}
+      }
+      router.push("/login?logout=true");
       router.refresh();
     }
   };

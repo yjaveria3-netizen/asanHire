@@ -37,7 +37,7 @@ export const CandidateTable: React.FC<CandidateTableProps> = ({ candidates }) =>
     <div className="neu-raised rounded-2xl overflow-hidden border border-[#D9DADF]/5">
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm text-[#D9DADF]">
-          <thead className="bg-[#242724] border-b border-[#8A8B82]/20 text-xs uppercase tracking-wider text-[#8A8B82]">
+          <thead className="bg-[#242724] border-b border-[#8A8B82]/20 text-sm uppercase tracking-wider text-[#8A8B82]">
             <tr>
               <th className="px-5 py-4 font-semibold">Rank</th>
               <th className="px-5 py-4 font-semibold">Candidate</th>
@@ -69,8 +69,8 @@ export const CandidateTable: React.FC<CandidateTableProps> = ({ candidates }) =>
                     #{index + 1}
                   </td>
                   <td className="px-5 py-4">
-                    <div className="font-medium text-[#D9DADF]">{displayName}</div>
-                    <div className="text-xs text-[#8A8B82]">{candidate.email}</div>
+                    <div className="font-semibold text-[#D9DADF]">{displayName}</div>
+                    <div className="text-sm text-[#8A8B82]">{candidate.email}</div>
                   </td>
                   <td className="px-5 py-4">
                     <NeuBadge status={candidate.status} />
