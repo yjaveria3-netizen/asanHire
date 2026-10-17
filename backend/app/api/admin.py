@@ -237,7 +237,7 @@ async def get_platform_overview(
     # 1. HR Users count
     hr_users_count = 0
     try:
-        hr_res = client.table("user_roles").select("id").eq("role", "hr").execute()
+        hr_res = client.table("user_roles").select("user_id").eq("role", "hr").execute()
         hr_users_count = len(hr_res.data or [])
         if hr_users_count == 0:
             prof_res = client.table("hr_profiles").select("user_id").execute()
@@ -373,6 +373,15 @@ async def list_hr_users(
     client = get_supabase_service_client()
     profiles_res = client.table("hr_profiles").select("*").execute()
     profiles = profiles_res.data or []
+    profiles_by_user = {str(p.get("user_id") or p.get("id")): p for p in profiles}
+
+    # Query all HR accounts from user_roles as well
+    roles_res = client.table("user_roles").select("*").eq("role", "hr").execute()
+    hr_roles = roles_res.data or []
+    roles_by_user = {str(r.get("user_id")): r for r in hr_roles if r.get("user_id")}
+
+    # Union of all HR user IDs
+    all_hr_user_ids = list(dict.fromkeys(list(roles_by_user.keys()) + list(profiles_by_user.keys())))
 
     # Map jobs to created_by / owner_id
     jobs_res = client.table("jobs").select("id, created_by, owner_id").execute()
@@ -402,8 +411,25 @@ async def list_hr_users(
             overrides_by_user[uid] = overrides_by_user.get(uid, 0) + 1
 
     hr_items: List[AdminHRUserItem] = []
-    for p in profiles:
-        uid = str(p.get("user_id") or p.get("id"))
+    for uid in all_hr_user_ids:
+        p = profiles_by_user.get(uid, {})
+        r = roles_by_user.get(uid, {})
+        email = str(p.get("contact_email") or "")
+        full_name = str(p.get("full_name") or "")
+        organization = str(p.get("organization") or "")
+
+        # Fallback to Supabase Auth admin user lookup if email or name missing
+        if not email or not full_name:
+            try:
+                auth_user = client.auth.admin.get_user_by_id(uid)
+                if auth_user and auth_user.user:
+                    email = email or auth_user.user.email or ""
+                    meta = auth_user.user.user_metadata or {}
+                    full_name = full_name or meta.get("full_name") or ""
+                    organization = organization or meta.get("organization") or ""
+            except Exception:
+                pass
+
         user_jobs = jobs_by_user.get(uid, [])
         user_candidates = []
         for jid in user_jobs:
@@ -419,20 +445,22 @@ async def list_hr_users(
             else 0.0
         )
 
+        status_val = str(r.get("status") or p.get("status") or "approved")
+
         hr_items.append(
             AdminHRUserItem(
                 id=uid,
-                email=str(p.get("contact_email") or ""),
-                full_name=str(p.get("full_name") or ""),
-                organization=str(p.get("organization") or ""),
-                contact_email=str(p.get("contact_email") or ""),
+                email=email or f"recruiter_{uid[:8]}@asanhire.dev",
+                full_name=full_name or "HR Recruiter",
+                organization=organization or "Independent",
+                contact_email=email or f"recruiter_{uid[:8]}@asanhire.dev",
                 reply_to_enabled=bool(p.get("reply_to_enabled", True)),
-                status=str(p.get("status") or "active"),
+                status=status_val,
                 jobs_count=len(user_jobs),
                 candidates_count=len(user_candidates),
                 override_rate=override_rate,
-                created_at=p.get("created_at"),
-                last_active_at=p.get("last_active_at") or p.get("created_at"),
+                created_at=p.get("created_at") or r.get("created_at"),
+                last_active_at=p.get("last_active_at") or r.get("updated_at") or p.get("created_at"),
             )
         )
 
@@ -563,12 +591,26 @@ async def list_hr_access_requests(
     res = query.order("created_at", desc=True).limit(100).execute()
     items = []
     for row in (res.data or []):
+        uid = str(row.get("user_id") or "")
+        email = str(row.get("email") or "")
+        if not email and uid:
+            try:
+                p_check = client.table("hr_profiles").select("contact_email").eq("user_id", uid).execute()
+                if p_check and p_check.data:
+                    email = p_check.data[0].get("contact_email") or ""
+                if not email:
+                    u_obj = client.auth.admin.get_user_by_id(uid)
+                    if u_obj and u_obj.user:
+                        email = u_obj.user.email or ""
+            except Exception:
+                pass
+
         items.append(HRAccessRequestItem(
             id=str(row["id"]),
             user_id=row.get("user_id"),
-            email=str(row.get("email") or ""),
-            full_name=str(row.get("full_name") or ""),
-            organization=str(row.get("organization") or ""),
+            email=email or f"recruiter_{uid[:8]}@asanhire.dev",
+            full_name=str(row.get("full_name") or "HR Recruiter"),
+            organization=str(row.get("organization") or "Independent"),
             reason=row.get("reason"),
             status=str(row.get("status") or "pending"),
             created_at=row.get("created_at"),
@@ -600,16 +642,41 @@ async def approve_hr_access_request(
         "reviewed_by": admin.id,
     }).eq("id", request_id).execute()
 
-    user_id = req_data.get("user_id")
-    email = req_data.get("email")
+    user_id = str(req_data.get("user_id") or "")
+    email = str(req_data.get("email") or "")
     if user_id:
-        client.table("hr_profiles").upsert({
-            "id": user_id,
-            "status": "active",
-            "contact_email": email,
-            "full_name": req_data.get("full_name", ""),
-            "organization": req_data.get("organization", ""),
-        }, on_conflict="id").execute()
+        if not email:
+            try:
+                u_obj = client.auth.admin.get_user_by_id(user_id)
+                if u_obj and u_obj.user:
+                    email = u_obj.user.email or ""
+            except Exception:
+                pass
+
+        # Update user_roles to approved
+        try:
+            client.table("user_roles").upsert({
+                "user_id": user_id,
+                "role": "hr",
+                "status": "approved",
+                "approved_by": admin.id,
+                "approved_at": now_utc,
+            }, on_conflict="user_id").execute()
+        except Exception as e:
+            logger.warning(f"Error updating user_roles for approval: {e}")
+
+        # Upsert hr_profiles matching schema
+        try:
+            client.table("hr_profiles").upsert({
+                "user_id": user_id,
+                "contact_email": email or f"recruiter_{user_id[:8]}@asanhire.dev",
+                "full_name": req_data.get("full_name") or "HR Recruiter",
+                "organization": req_data.get("organization") or "Independent",
+                "job_title": req_data.get("job_title") or "Recruiter",
+                "reply_to_enabled": True,
+            }, on_conflict="user_id").execute()
+        except Exception as e:
+            logger.warning(f"Error updating hr_profiles for approval: {e}")
 
     _write_admin_audit_log(
         client,
@@ -645,11 +712,14 @@ async def reject_hr_access_request(
         "reviewed_by": admin.id,
     }).eq("id", request_id).execute()
 
-    user_id = req_data.get("user_id")
+    user_id = str(req_data.get("user_id") or "")
     if user_id:
-        client.table("hr_profiles").update({
-            "status": "suspended",
-        }).eq("id", user_id).execute()
+        try:
+            client.table("user_roles").update({
+                "status": "rejected",
+            }).eq("user_id", user_id).execute()
+        except Exception:
+            pass
 
     _write_admin_audit_log(
         client,

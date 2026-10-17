@@ -57,9 +57,10 @@ export const MicCheckModal: React.FC<MicCheckModalProps> = ({
 
     if (recognitionRef.current) {
       try {
-        recognitionRef.current.stop();
+        const rec = recognitionRef.current;
+        recognitionRef.current = null;
+        rec.stop();
       } catch {}
-      recognitionRef.current = null;
     }
 
     setIsTesting(false);
@@ -128,30 +129,41 @@ export const MicCheckModal: React.FC<MicCheckModalProps> = ({
       const SpeechRecognition =
         (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       if (SpeechRecognition) {
-        const recognition = new SpeechRecognition();
-        recognition.continuous = true;
-        recognition.interimResults = true;
-        recognition.lang = "en-US";
-
-        recognition.onresult = (e: any) => {
-          let text = "";
-          for (let i = 0; i < e.results.length; i++) {
-            text += e.results[i][0].transcript + " ";
-          }
-          if (text.trim()) {
-            setTranscript(text.trim());
-            setHasDetectedAudio(true);
-          }
-        };
-
-        recognition.onerror = () => {
-          // Non-fatal for STT test
-        };
-
         try {
+          const recognition = new SpeechRecognition();
+          recognition.continuous = true;
+          recognition.interimResults = true;
+          recognition.lang = "en-US";
+
+          recognition.onresult = (e: any) => {
+            let combined = "";
+            for (let i = 0; i < e.results.length; i++) {
+              combined += e.results[i][0].transcript + " ";
+            }
+            if (combined.trim()) {
+              setTranscript(combined.trim());
+              setHasDetectedAudio(true);
+            }
+          };
+
+          recognition.onerror = (e: any) => {
+            console.warn("Speech recognition test error:", e?.error);
+          };
+
+          recognition.onend = () => {
+            // Auto-restart while user is still in test mode
+            if (recognitionRef.current) {
+              try {
+                recognition.start();
+              } catch {}
+            }
+          };
+
           recognition.start();
           recognitionRef.current = recognition;
-        } catch {}
+        } catch (recErr) {
+          console.warn("Failed to initialize SpeechRecognition:", recErr);
+        }
       }
     } catch (err: any) {
       console.warn("Mic test error:", err);
@@ -271,7 +283,11 @@ export const MicCheckModal: React.FC<MicCheckModalProps> = ({
               </span>
               <div className="p-3 rounded-lg bg-[#1E201E] border border-[#383A38] min-h-[50px] text-xs text-[#D9DADF] italic flex items-center">
                 {transcript ? (
-                  <span>&ldquo;{transcript}&rdquo;</span>
+                  <span className="text-[#8FD19E] font-medium not-italic">&ldquo;{transcript}&rdquo;</span>
+                ) : audioLevel > 15 ? (
+                  <span className="text-[#DD700B] flex items-center gap-1.5 animate-pulse not-italic">
+                    <Activity className="w-3.5 h-3.5" /> Detecting speech...
+                  </span>
                 ) : isTesting ? (
                   <span className="text-[#8A8B82]/60">Say something (e.g. &ldquo;Testing one two three&rdquo;)...</span>
                 ) : (

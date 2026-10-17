@@ -71,7 +71,7 @@ export const NeuSidebar: React.FC = () => {
   ];
 
   return (
-    <aside className="w-20 md:w-64 min-h-screen bg-[#242724] border-r border-[#D9DADF]/5 p-3 md:p-5 flex flex-col justify-between shrink-0 transition-all">
+    <aside className="w-20 md:w-64 h-screen sticky top-0 bg-[#242724] border-r border-[#D9DADF]/5 p-3 md:p-5 flex flex-col justify-between shrink-0 transition-all overflow-hidden">
       <div>
         {/* Brand Logo Header: Full on md+, Mark on small screens / collapsed */}
         <div className="flex items-center justify-center md:justify-start px-1 md:px-3 py-4 mb-6">

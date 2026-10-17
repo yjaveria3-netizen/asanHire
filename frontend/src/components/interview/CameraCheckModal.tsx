@@ -52,7 +52,7 @@ export const CameraCheckModal: React.FC<CameraCheckModalProps> = ({
     setIsCameraActive(false);
   }, []);
 
-  // Frame check to verify presence in pre-check
+  // Frame check to verify presence in center reticle pre-check
   const checkFrame = useCallback(() => {
     if (!videoRef.current || !canvasRef.current) return;
     const video = videoRef.current;
@@ -62,31 +62,50 @@ export const CameraCheckModal: React.FC<CameraCheckModalProps> = ({
 
     const ctx = canvas.getContext("2d", { willReadFrequently: true });
     if (ctx) {
-      ctx.drawImage(video, 0, 0, 80, 60);
-      const frame = ctx.getImageData(0, 0, 80, 60);
+      const W = 80;
+      const H = 60;
+      ctx.drawImage(video, 0, 0, W, H);
+      const frame = ctx.getImageData(0, 0, W, H);
       const data = frame.data;
 
-      let skinPixels = 0;
-      for (let i = 0; i < data.length; i += 4) {
-        const r = data[i];
-        const g = data[i + 1];
-        const b = data[i + 2];
+      // Define center reticle region: x: [22..58], y: [10..50]
+      const minX = 22;
+      const maxX = 58;
+      const minY = 10;
+      const maxY = 50;
+      const reticleArea = (maxX - minX) * (maxY - minY);
 
-        const isSkin =
-          r > 60 &&
-          g > 40 &&
-          b > 20 &&
-          r > g &&
-          r > b &&
-          r - g > 12 &&
-          Math.abs(r - g) < 150 &&
-          Math.max(r, g, b) - Math.min(r, g, b) > 15;
+      let centerSkinPixels = 0;
+      let centerLuminanceSum = 0;
 
-        if (isSkin) skinPixels++;
+      for (let y = minY; y < maxY; y++) {
+        for (let x = minX; x < maxX; x++) {
+          const idx = (y * W + x) * 4;
+          const r = data[idx];
+          const g = data[idx + 1];
+          const b = data[idx + 2];
+
+          centerLuminanceSum += 0.299 * r + 0.587 * g + 0.114 * b;
+
+          // Normalized skin tone heuristic (supports diverse skin tones)
+          const isSkin =
+            r > 50 &&
+            g > 35 &&
+            b > 20 &&
+            r > b &&
+            (r - g >= 8 || Math.abs(r - g) <= 15) &&
+            Math.max(r, g, b) - Math.min(r, g, b) > 12;
+
+          if (isSkin) centerSkinPixels++;
+        }
       }
 
-      const ratio = skinPixels / (80 * 60);
-      setIsFaceDetected(ratio >= 0.02);
+      const reticleSkinRatio = centerSkinPixels / reticleArea;
+      const avgLuminance = centerLuminanceSum / reticleArea;
+
+      // Face is considered centered only if reticle has >= 14% skin density and frame isn't pitch black or blown out
+      const isCenteredAndClear = reticleSkinRatio >= 0.14 && avgLuminance > 30 && avgLuminance < 240;
+      setIsFaceDetected(isCenteredAndClear);
     }
   }, []);
 

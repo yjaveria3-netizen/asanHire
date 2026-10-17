@@ -90,8 +90,8 @@ export default function HRDashboardPage() {
               Recruiter Cockpit
             </span>
             <span className="text-[#8A8B82]">&bull;</span>
-            <span className="text-xs text-[#8FD19E] flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-[#8FD19E] animate-pulse" /> FastMCP Online
+            <span className="text-xs text-[#8FD19E] flex items-center gap-1 font-medium">
+              <span className="w-2 h-2 rounded-full bg-[#8FD19E] animate-pulse" /> System Operational
             </span>
           </div>
           <h1 className="text-3xl sm:text-4xl font-extrabold text-[#D9DADF]">
@@ -134,7 +134,20 @@ export default function HRDashboardPage() {
             <div className="text-3xl font-bold text-[#D9DADF]">
               {loading ? "..." : jobs.length}
             </div>
-            <div className="text-xs text-[#8FD19E] mt-1 flex items-center gap-1 font-medium">
+            {/* Linear Progress Meter (0 to End) */}
+            <div className="mt-2.5 flex flex-col gap-1">
+              <div className="w-full h-1.5 bg-[#202320] rounded-full overflow-hidden border border-[#383A38]">
+                <div
+                  className="h-full bg-[#DD700B] rounded-full transition-all duration-500"
+                  style={{ width: `${Math.min(100, Math.max(10, (jobs.length / 10) * 100))}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-[10px] text-[#8A8B82] font-mono">
+                <span>0</span>
+                <span>Max: 10</span>
+              </div>
+            </div>
+            <div className="text-xs text-[#8FD19E] mt-2 flex items-center gap-1 font-medium">
               <CheckCircle2 className="w-3.5 h-3.5" /> All rubrics synthesized
             </div>
           </div>
@@ -149,7 +162,20 @@ export default function HRDashboardPage() {
           </div>
           <div className="mt-4">
             <div className="text-3xl font-bold text-[#D9DADF]">42</div>
-            <div className="text-xs text-[#8A8B82] mt-1">
+            {/* Linear Progress Meter (0 to End) */}
+            <div className="mt-2.5 flex flex-col gap-1">
+              <div className="w-full h-1.5 bg-[#202320] rounded-full overflow-hidden border border-[#383A38]">
+                <div
+                  className="h-full bg-[#8FD19E] rounded-full transition-all duration-500"
+                  style={{ width: "42%" }}
+                />
+              </div>
+              <div className="flex justify-between text-[10px] text-[#8A8B82] font-mono">
+                <span>0</span>
+                <span>Max: 100</span>
+              </div>
+            </div>
+            <div className="text-xs text-[#8A8B82] mt-2">
               Across all active pipelines
             </div>
           </div>
@@ -164,8 +190,21 @@ export default function HRDashboardPage() {
           </div>
           <div className="mt-4">
             <div className="text-3xl font-bold text-[#FCF8D8]">84.6%</div>
-            <div className="text-xs text-[#8A8B82] mt-1">
-              Groq AI objective score
+            {/* Linear Progress Meter (0 to End) */}
+            <div className="mt-2.5 flex flex-col gap-1">
+              <div className="w-full h-1.5 bg-[#202320] rounded-full overflow-hidden border border-[#383A38]">
+                <div
+                  className="h-full bg-[#FCF8D8] rounded-full transition-all duration-500"
+                  style={{ width: "84.6%" }}
+                />
+              </div>
+              <div className="flex justify-between text-[10px] text-[#8A8B82] font-mono">
+                <span>0%</span>
+                <span>100%</span>
+              </div>
+            </div>
+            <div className="text-xs text-[#8A8B82] mt-2">
+              Objective benchmark score
             </div>
           </div>
         </NeuCard>
@@ -179,7 +218,20 @@ export default function HRDashboardPage() {
           </div>
           <div className="mt-4">
             <div className="text-3xl font-bold text-[#8FD19E]">96.8%</div>
-            <div className="text-xs text-[#8FD19E] mt-1 flex items-center gap-1 font-medium">
+            {/* Linear Progress Meter (0 to End) */}
+            <div className="mt-2.5 flex flex-col gap-1">
+              <div className="w-full h-1.5 bg-[#202320] rounded-full overflow-hidden border border-[#383A38]">
+                <div
+                  className="h-full bg-[#8FD19E] rounded-full transition-all duration-500"
+                  style={{ width: "96.8%" }}
+                />
+              </div>
+              <div className="flex justify-between text-[10px] text-[#8A8B82] font-mono">
+                <span>0%</span>
+                <span>100%</span>
+              </div>
+            </div>
+            <div className="text-xs text-[#8FD19E] mt-2 flex items-center gap-1 font-medium">
               <CheckCircle2 className="w-3.5 h-3.5" /> High trust confidence
             </div>
           </div>
@@ -304,17 +356,6 @@ export default function HRDashboardPage() {
               <div className="flex items-center gap-2.5">
                 <PlusCircle className="w-4 h-4 text-[#DD700B]" />
                 <span className="font-medium">Post a New Job</span>
-              </div>
-              <ArrowRight className="w-3.5 h-3.5 text-[#8A8B82]" />
-            </Link>
-
-            <Link
-              href="/interview/demo-token"
-              className="flex items-center justify-between p-3 rounded-lg bg-[#1E201E] border border-[#383A38] text-sm text-[#D9DADF] hover:border-[#DD700B] transition-colors"
-            >
-              <div className="flex items-center gap-2.5">
-                <Mic className="w-4 h-4 text-[#8FD19E]" />
-                <span className="font-medium">Candidate Voice Room Demo</span>
               </div>
               <ArrowRight className="w-3.5 h-3.5 text-[#8A8B82]" />
             </Link>

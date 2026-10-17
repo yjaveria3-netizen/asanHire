@@ -71,10 +71,6 @@ export default function HomePage() {
     setActiveTab(tabId);
     if (typeof window !== "undefined") {
       window.history.replaceState(null, "", `#${tabId}`);
-      const target = document.getElementById("tab-panel");
-      if (target) {
-        target.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
     }
   };
 
@@ -82,15 +78,15 @@ export default function HomePage() {
     <div className="min-h-screen bg-[#1E201E] text-[#D9DADF] flex flex-col selection:bg-[#DD700B] selection:text-[#1E201E] overflow-x-hidden">
       {/* Top Navigation Bar: Logo on the FAR LEFT, 4 Sub-Tabs on the RIGHT */}
       <header className="sticky top-0 z-50 bg-[#1E201E] border-b border-[#343834]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between gap-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between gap-3">
           {/* Far Left: Noticeably Larger asanHire Logo */}
           <div className="shrink-0">
             <Logo variant="full" size="lg" href="/" priority />
           </div>
 
-          {/* Far Right: 4 Core Recruiting Sub-Tabs */}
+          {/* Far Right: 4 Core Recruiting Sub-Tabs - Single Line Layout */}
           <nav
-            className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar py-2"
+            className="flex items-center gap-1 sm:gap-1.5 flex-nowrap shrink-0"
             aria-label="Recruiting sub-tabs"
           >
             {TABS.map((tab) => {
@@ -101,7 +97,7 @@ export default function HomePage() {
                   key={tab.id}
                   type="button"
                   onClick={() => handleTabSelect(tab.id)}
-                  className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-medium transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#DD700B] ${
+                  className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-colors shrink-0 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#DD700B] ${
                     isActive
                       ? "bg-[#242724] text-[#FCF8D8] border border-[#DD700B]"
                       : "text-[#8A8B82] hover:text-[#D9DADF] hover:bg-[#242724]/60 border border-transparent"
@@ -109,7 +105,7 @@ export default function HomePage() {
                   aria-pressed={isActive}
                 >
                   <Icon
-                    className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${
+                    className={`w-3.5 h-3.5 ${
                       isActive ? "text-[#DD700B]" : "text-[#8A8B82]"
                     }`}
                   />

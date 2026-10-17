@@ -64,13 +64,13 @@ export default function HRJobsPage() {
           <div className="w-16 h-16 rounded-2xl bg-[#242724] border border-[#383A38] flex items-center justify-center text-[#DD700B] mb-4">
             <Briefcase className="w-8 h-8 opacity-60" />
           </div>
-          <h3 className="text-lg font-bold text-[#D9DADF]">No Job Postings Yet</h3>
+          <h3 className="text-lg font-bold text-[#D9DADF]">No Active Jobs</h3>
           <p className="text-sm text-[#8A8B82] mt-1.5 max-w-md mb-6 leading-relaxed">
-            Create your first open role to automatically synthesize AI evaluation rubrics and screen candidate resumes in minutes.
+            There are currently no active job requisitions.
           </p>
           <Link href="/hr/jobs/new">
             <NeuButton variant="primary" size="md">
-              <PlusCircle className="w-4 h-4 mr-2" /> Post Your First Job
+              <PlusCircle className="w-4 h-4 mr-2" /> Post Job
             </NeuButton>
           </Link>
         </NeuCard>

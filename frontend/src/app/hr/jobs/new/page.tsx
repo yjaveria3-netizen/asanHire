@@ -203,8 +203,16 @@ export default function NewJobPage() {
 
           <div className="flex justify-end pt-3">
             <NeuButton type="submit" variant="primary" size="lg" disabled={loading}>
-              {loading ? "Generating Rubric & Publishing..." : "Publish Job & Generate Rubric"}{" "}
-              <ArrowRight className="w-4 h-4 ml-1" />
+              {loading ? (
+                <span className="flex items-center gap-2">
+                  <span className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                  Synthesizing evaluation rubric with Gemini AI (~5-8s)...
+                </span>
+              ) : (
+                <>
+                  Publish Job & Generate Rubric <ArrowRight className="w-4 h-4 ml-1" />
+                </>
+              )}
             </NeuButton>
           </div>
         </form>
