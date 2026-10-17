@@ -52,6 +52,13 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
 
 export const api = {
   // Public
+  getPublicJobs: async (search?: string): Promise<Job[]> => {
+    const qs = search ? `?search=${encodeURIComponent(search)}` : "";
+    return request<Job[]>(`/public/jobs${qs}`)
+      .catch(() => request<Job[]>(`/api/public/jobs${qs}`))
+      .catch(() => []);
+  },
+
   getPublicJob: async (jobId: string): Promise<Job> => {
     return request<Job>(`/api/public/jobs/${jobId}`).catch(() => ({
       id: jobId,
