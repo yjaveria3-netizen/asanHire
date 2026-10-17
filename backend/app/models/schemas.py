@@ -928,3 +928,25 @@ class AdminOverrideQuestionRequest(BaseModel):
 class HROverrideAnswerRequest(BaseModel):
     answer: str = Field(..., min_length=1, max_length=1000)
 
+
+class RegisterRoleRequest(BaseModel):
+    user_id: str
+    email: str
+    full_name: Optional[str] = ""
+    role: str = "hr"
+    organization: Optional[str] = ""
+    reason: Optional[str] = ""
+
+
+class HRAccessRequestItem(BaseModel):
+    id: str
+    user_id: Optional[str] = None
+    email: str
+    full_name: str = ""
+    organization: str = ""
+    reason: Optional[str] = None
+    status: str
+    created_at: Optional[datetime] = None
+    reviewed_at: Optional[datetime] = None
+    reviewed_by: Optional[str] = None
+

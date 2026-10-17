@@ -7,7 +7,7 @@ from email_validator import validate_email, EmailNotValidError
 
 from app.core.rate_limit import rate_limit_public
 from app.core.db import get_supabase_service_client
-from app.models.schemas import JobPublicResponse, ApplicationSubmitResponse
+from app.models.schemas import JobPublicResponse, ApplicationSubmitResponse, RegisterRoleRequest
 from app.services.pdf import validate_pdf, extract_text, sanitize_text
 from app.services.storage import upload_resume
 from app.agents.matcher import run_matcher_for_candidate, detect_prompt_injection
@@ -263,3 +263,89 @@ async def submit_application(
         consent=consent,
         resume=resume,
     )
+
+
+@router.post(
+    "/register-role",
+    summary="Register user role intent (HR pending gate or Candidate)",
+)
+async def register_role(req: RegisterRoleRequest):
+    """
+    Called upon user registration to enforce role separation:
+    - If HR: sets user_roles.role = 'hr', creates hr_profiles with status = 'pending',
+      and creates a pending row in hr_access_requests for admin review.
+    - If Candidate: sets user_roles.role = 'candidate', creates candidate_portal_profiles.
+    """
+    db = get_supabase_service_client()
+    clean_email = req.email.strip().lower()
+    clean_name = (req.full_name or "").strip()
+    clean_org = (req.organization or "").strip()
+    role_type = req.role.strip().lower()
+
+    if role_type == "hr":
+        # 1. user_roles: HR
+        try:
+            db.table("user_roles").upsert({
+                "user_id": req.user_id,
+                "role": "hr",
+                "must_change_password": False,
+            }, on_conflict="user_id").execute()
+        except Exception as e:
+            logger.warning(f"Error upserting user_roles: {e}")
+
+        # 2. hr_profiles: PENDING
+        try:
+            db.table("hr_profiles").upsert({
+                "id": req.user_id,
+                "contact_email": clean_email,
+                "full_name": clean_name,
+                "organization": clean_org,
+                "status": "pending",
+            }, on_conflict="id").execute()
+        except Exception as e:
+            logger.warning(f"Error upserting hr_profiles: {e}")
+
+        # 3. hr_access_requests: record request
+        try:
+            db.table("hr_access_requests").insert({
+                "user_id": req.user_id,
+                "email": clean_email,
+                "full_name": clean_name,
+                "organization": clean_org,
+                "reason": req.reason or "HR Recruiter Portal Registration",
+                "status": "pending",
+            }).execute()
+        except Exception as e:
+            logger.warning(f"Error inserting hr_access_requests: {e}")
+
+        return {
+            "role": "hr",
+            "status": "pending",
+            "message": "HR account created. Awaiting administrator approval before access is granted. Please email admin@asanhire.dev.",
+        }
+
+    else:
+        # Candidate registration
+        try:
+            db.table("user_roles").upsert({
+                "user_id": req.user_id,
+                "role": "candidate",
+                "must_change_password": False,
+            }, on_conflict="user_id").execute()
+        except Exception as e:
+            logger.warning(f"Error upserting candidate user_roles: {e}")
+
+        try:
+            db.table("candidate_portal_profiles").upsert({
+                "id": req.user_id,
+                "email": clean_email,
+                "full_name": clean_name,
+            }, on_conflict="id").execute()
+        except Exception as e:
+            logger.warning(f"Error upserting candidate_portal_profiles: {e}")
+
+        return {
+            "role": "candidate",
+            "status": "active",
+            "message": "Candidate registered successfully.",
+        }

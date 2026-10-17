@@ -234,3 +234,16 @@ export interface AdminCandidateLookupResult {
   blocked_reason?: string;
   applications: AdminCandidateApplication[];
 }
+
+export interface HRAccessRequest {
+  id: string;
+  user_id?: string;
+  email: string;
+  full_name?: string;
+  organization?: string;
+  reason?: string;
+  status: "pending" | "approved" | "rejected";
+  created_at?: string;
+  reviewed_at?: string;
+  reviewed_by?: string;
+}

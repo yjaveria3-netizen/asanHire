@@ -16,14 +16,22 @@
   --glow-accent: none;
 }
 
+html {
+  font-size: 17.5px; /* Proportionally scales rem typography and components across entire site */
+  -webkit-text-size-adjust: 100%;
+}
+
 *, *::before, *::after {
-  font-family: var(--font-paquito), "Paquito", Georgia, Cambria, "Times New Roman", serif !important;
+  font-family: var(--font-slab), "Roboto Slab", Rockwell, "Rockwell Nova", Clarendon, Georgia, serif !important;
 }
 
 body {
   background-color: var(--bg);
   color: var(--text);
-  font-family: var(--font-paquito), "Paquito", Georgia, Cambria, "Times New Roman", serif !important;
+  font-family: var(--font-slab), "Roboto Slab", Rockwell, "Rockwell Nova", Clarendon, Georgia, serif !important;
+  font-size: 1rem;
+  line-height: 1.6;
+  letter-spacing: 0.01em;
   min-height: 100vh;
   margin: 0;
   padding: 0;
@@ -31,7 +39,7 @@ body {
 }
 
 h1, h2, h3, h4, h5, h6, p, span, a, button, input, textarea, select, nav, label, code, pre, table, th, td {
-  font-family: var(--font-paquito), "Paquito", Georgia, Cambria, "Times New Roman", serif !important;
+  font-family: var(--font-slab), "Roboto Slab", Rockwell, "Rockwell Nova", Clarendon, Georgia, serif !important;
 }
 
 /* Accessibility Focus Ring (2px Cinnamon) */

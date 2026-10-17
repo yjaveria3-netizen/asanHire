@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { toast } from "sonner";
 import { api } from "@/lib/api";
-import { AdminHRUser } from "@/lib/types";
+import { AdminHRUser, HRAccessRequest } from "@/lib/types";
 import { NeuCard } from "@/components/neu/NeuCard";
 import { NeuButton } from "@/components/neu/NeuButton";
 import {
@@ -17,22 +18,63 @@ import {
   ExternalLink,
   CheckCircle2,
   XCircle,
+  Clock,
+  Building2,
 } from "lucide-react";
 
 export default function AdminHRUsersPage() {
   const [users, setUsers] = useState<AdminHRUser[]>([]);
+  const [pendingRequests, setPendingRequests] = useState<HRAccessRequest[]>([]);
+  const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"jobs" | "candidates" | "override_rate" | "last_active">("jobs");
   const [sortAsc, setSortAsc] = useState(false);
 
+  const loadData = async () => {
+    try {
+      const [hrList, reqList] = await Promise.all([
+        api.getAdminHRUsers(),
+        api.getAdminHRRequests("pending"),
+      ]);
+      setUsers(hrList);
+      setPendingRequests(reqList);
+    } catch (err) {
+      console.error("Failed to load HR data:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    api
-      .getAdminHRUsers()
-      .then(setUsers)
-      .catch((err) => console.error("Failed to load HR users:", err))
-      .finally(() => setLoading(false));
+    loadData();
   }, []);
+
+  const handleApprove = async (id: string, name: string) => {
+    setActionLoading((prev) => ({ ...prev, [id]: true }));
+    try {
+      await api.approveAdminHRRequest(id);
+      toast.success(`Approved access for ${name || "recruiter"}!`, { position: "top-center" });
+      await loadData();
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to approve access request", { position: "top-center" });
+    } finally {
+      setActionLoading((prev) => ({ ...prev, [id]: false }));
+    }
+  };
+
+  const handleReject = async (id: string, name: string) => {
+    setActionLoading((prev) => ({ ...prev, [id]: true }));
+    try {
+      await api.rejectAdminHRRequest(id);
+      toast.info(`Rejected access request for ${name || "recruiter"}`, { position: "top-center" });
+      await loadData();
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to reject access request", { position: "top-center" });
+    } finally {
+      setActionLoading((prev) => ({ ...prev, [id]: false }));
+    }
+  };
 
   const handleSort = (field: "jobs" | "candidates" | "override_rate" | "last_active") => {
     if (sortBy === field) {
@@ -92,6 +134,81 @@ export default function AdminHRUsersPage() {
           </span>
         </div>
       </div>
+
+      {/* Pending Access Requests Section */}
+      {pendingRequests.length > 0 && (
+        <NeuCard variant="raised" className="p-6 border-amber-500/30 bg-[#262826] shadow-lg">
+          <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#383A38]">
+            <div className="flex items-center gap-2.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#DD700B] animate-ping" />
+              <h2 className="text-base font-bold text-[#D9DADF] flex items-center gap-2">
+                <Clock className="w-4 h-4 text-[#DD700B]" />
+                Pending Recruiter Registrations ({pendingRequests.length})
+              </h2>
+            </div>
+            <span className="text-[11px] font-mono text-[#DD700B] bg-[#DD700B]/10 border border-[#DD700B]/20 px-2.5 py-1 rounded-lg">
+              Approval Required
+            </span>
+          </div>
+
+          <p className="text-xs text-[#8A8B82] mb-4">
+            These HR recruiters have registered and cannot access the sovereign portal until you approve them.
+          </p>
+
+          <div className="flex flex-col gap-3">
+            {pendingRequests.map((req) => (
+              <div
+                key={req.id}
+                className="neu-inset p-4 rounded-xl border border-[#383A38] bg-[#1E201E] flex flex-col md:flex-row md:items-center justify-between gap-4"
+              >
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-[#D9DADF]">
+                      {req.full_name || "New Recruiter"}
+                    </span>
+                    <span className="text-xs font-mono text-[#8A8B82]">
+                      ({req.email})
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-4 text-xs text-[#8A8B82]">
+                    {req.organization && (
+                      <span className="flex items-center gap-1.5">
+                        <Building2 className="w-3.5 h-3.5 text-[#DD700B]" />
+                        {req.organization}
+                      </span>
+                    )}
+                    <span>
+                      Registered: {req.created_at ? new Date(req.created_at).toLocaleDateString() : "Recently"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2.5 self-end md:self-center">
+                  <button
+                    type="button"
+                    disabled={actionLoading[req.id]}
+                    onClick={() => handleReject(req.id, req.full_name || req.email)}
+                    className="px-3 py-1.5 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10 text-xs font-medium transition-all disabled:opacity-50 flex items-center gap-1.5"
+                  >
+                    <XCircle className="w-3.5 h-3.5" />
+                    <span>Reject</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={actionLoading[req.id]}
+                    onClick={() => handleApprove(req.id, req.full_name || req.email)}
+                    className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-sm transition-all disabled:opacity-50 flex items-center gap-1.5"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>{actionLoading[req.id] ? "Approving..." : "Approve Recruiter"}</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </NeuCard>
+      )}
 
       {/* Search Bar */}
       <div className="neu-raised rounded-2xl p-4 bg-[#242724] border border-[#D9DADF]/5 flex items-center gap-2.5 max-w-md">
