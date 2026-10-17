@@ -11,9 +11,9 @@
   --accent: #DD700B;
   --cream: #FCF8D8;
 
-  --shadow-raised: 6px 6px 12px #151715, -6px -6px 12px #272927;
-  --shadow-inset: inset 4px 4px 8px #151715, inset -4px -4px 8px #272927;
-  --glow-accent: 0 4px 14px rgba(221, 112, 11, 0.4);
+  --shadow-raised: none;
+  --shadow-inset: none;
+  --glow-accent: none;
 }
 
 body {
@@ -36,27 +36,28 @@ h1, h2, h3, h4, h5, h6, button, input, textarea, select, nav, label {
   outline-offset: 2px;
 }
 
-/* Neumorphic Extrusion (Raised Lift) */
+/* Flat Clean Card (Thin Border, Flat Solid Fill, No Heavy Shadows) */
 .neu-raised {
   background-color: var(--surface);
-  box-shadow: var(--shadow-raised);
-  border: 1px solid rgba(217, 218, 223, 0.05);
+  box-shadow: none;
+  border: 1px solid #343834;
 }
 
-/* Neumorphic Inset (Pressed / Sunken Depth) */
+/* Flat Inset Panel (Clean Flat Fill, Thin Border) */
 .neu-inset {
-  background-color: #232623;
-  box-shadow: var(--shadow-inset);
-  border: 1px solid rgba(21, 23, 21, 0.6);
+  background-color: #242724;
+  box-shadow: none;
+  border: 1px solid #2E312E;
 }
 
-/* Primary Action Button (Solid Cinnamon with Ambient Glow) */
+/* Primary Action Button (Flat Solid Cinnamon, Thin Border, No Glow) */
 .btn-primary {
   background-color: var(--accent);
   color: #1E201E;
-  font-weight: 600;
-  box-shadow: var(--glow-accent);
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  font-weight: 700;
+  box-shadow: none;
+  border: 1px solid #DD700B;
+  transition: all 0.15s ease-out;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -66,8 +67,8 @@ h1, h2, h3, h4, h5, h6, button, input, textarea, select, nav, label {
 }
 
 .btn-primary:hover {
-  filter: brightness(1.08);
-  box-shadow: 0 6px 20px rgba(221, 112, 11, 0.6);
+  filter: brightness(1.06);
+  box-shadow: none;
   transform: translateY(-1px);
 }
 
@@ -185,6 +186,31 @@ h1, h2, h3, h4, h5, h6, button, input, textarea, select, nav, label {
   animation: screenBlink 2.4s ease-in-out infinite;
 }
 
+@keyframes blurReveal {
+  0% {
+    filter: blur(8px);
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  100% {
+    filter: blur(0px);
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.feature-line-1 {
+  animation: blurReveal 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
+}
+
+.feature-line-2 {
+  animation: blurReveal 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.55s both;
+}
+
+.feature-line-3 {
+  animation: blurReveal 0.6s cubic-bezier(0.16, 1, 0.3, 1) 1.0s both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-slide-left,
   .animate-slide-right,
@@ -192,9 +218,13 @@ h1, h2, h3, h4, h5, h6, button, input, textarea, select, nav, label {
   .animate-drift-2,
   .animate-drift-3,
   .animate-robot-idle,
-  .animate-screen-blink {
+  .animate-screen-blink,
+  .feature-line-1,
+  .feature-line-2,
+  .feature-line-3 {
     animation: none !important;
-    transform: none !important;
+    filter: none !important;
     opacity: 1 !important;
+    transform: none !important;
   }
 }

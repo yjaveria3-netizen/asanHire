@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Logo } from "@/components/brand/Logo";
 import { RobotWorker } from "@/components/brand/RobotWorker";
+import { CollaborationIllustration } from "@/components/brand/CollaborationIllustration";
 import { NeuCard } from "@/components/neu/NeuCard";
 import { NeuButton } from "@/components/neu/NeuButton";
 import {
@@ -13,10 +14,8 @@ import {
   Users,
   ArrowRight,
   CheckCircle2,
-  Sparkles,
   Lock,
   ChevronRight,
-  BarChart3,
   Scale,
 } from "lucide-react";
 
@@ -59,16 +58,30 @@ const TABS: TabItem[] = [
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState<TabId>("cockpit");
 
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const hash = window.location.hash.replace("#", "") as TabId;
+      if (hash && ["cockpit", "rubrics", "screening", "integrity"].includes(hash)) {
+        setActiveTab(hash);
+      }
+    }
+  }, []);
+
+  const handleTabSelect = (tabId: TabId) => {
+    setActiveTab(tabId);
+    if (typeof window !== "undefined") {
+      window.history.replaceState(null, "", `#${tabId}`);
+      const target = document.getElementById("tab-panel");
+      if (target) {
+        target.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#1E201E] text-[#D9DADF] flex flex-col selection:bg-[#DD700B] selection:text-[#1E201E] overflow-x-hidden">
-      {/* Background ambient lighting */}
-      <div className="fixed inset-0 pointer-events-none z-0">
-        <div className="absolute top-[-8%] left-[15%] w-[480px] h-[480px] rounded-full bg-[#DD700B]/5 blur-[140px]" />
-        <div className="absolute top-[35%] right-[10%] w-[420px] h-[420px] rounded-full bg-[#FCF8D8]/4 blur-[160px]" />
-      </div>
-
       {/* Top Navigation Bar: Logo on the FAR LEFT, 4 Sub-Tabs on the RIGHT */}
-      <header className="sticky top-0 z-50 backdrop-blur-md bg-[#1E201E]/90 border-b border-[#D9DADF]/10">
+      <header className="sticky top-0 z-50 bg-[#1E201E] border-b border-[#343834]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between gap-4">
           {/* Far Left: Noticeably Larger asanHire Logo */}
           <div className="shrink-0">
@@ -87,11 +100,11 @@ export default function HomePage() {
                 <button
                   key={tab.id}
                   type="button"
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#DD700B] ${
+                  onClick={() => handleTabSelect(tab.id)}
+                  className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-medium transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#DD700B] ${
                     isActive
-                      ? "bg-[#2A2D2A] text-[#FCF8D8] border border-[#DD700B]/50 shadow-[0_2px_12px_rgba(221,112,11,0.2)]"
-                      : "text-[#8A8B82] hover:text-[#D9DADF] hover:bg-[#232623]/70 border border-transparent"
+                      ? "bg-[#242724] text-[#FCF8D8] border border-[#DD700B]"
+                      : "text-[#8A8B82] hover:text-[#D9DADF] hover:bg-[#242724]/60 border border-transparent"
                   }`}
                   aria-pressed={isActive}
                 >
@@ -102,7 +115,7 @@ export default function HomePage() {
                   />
                   <span>{tab.label}</span>
                   {isActive && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#DD700B] shadow-[0_0_6px_#DD700B]" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#DD700B]" />
                   )}
                 </button>
               );
@@ -113,17 +126,17 @@ export default function HomePage() {
 
       {/* Main Content */}
       <main className="relative z-10 flex-1 flex flex-col">
-        {/* Hero Section: Left = Tagline + Guarantees + Bottom-Left Robot, Right = Action Buttons */}
+        {/* Hero Section: Left = Tagline + Guarantees, Right = Action Buttons + Robot below card */}
         <section className="pt-12 sm:pt-16 pb-12 px-4 sm:px-6 max-w-7xl mx-auto w-full">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
-            {/* Left Column: Tagline, Plain-Language Copy & Robot at Bottom-Left */}
+            {/* Left Column: Tagline & Plain-Language Copy */}
             <div className="lg:col-span-7 flex flex-col items-start text-left">
               {/* Tagline with Load Animations */}
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-[#D9DADF] leading-[1.15]">
                 <span className="inline-block animate-slide-left text-[#D9DADF]">
                   AI recommends.
                 </span>{" "}
-                <span className="inline-block animate-slide-right bg-gradient-to-r from-[#DD700B] via-[#E88930] to-[#FCF8D8] bg-clip-text text-transparent">
+                <span className="inline-block animate-slide-right text-[#DD700B]">
                   Human decides.
                 </span>
               </h1>
@@ -133,32 +146,27 @@ export default function HomePage() {
                 Empower your hiring team with autonomous resume screening, objective rubrics, and real-time voice interviews — while every hire or rejection remains 100% under human recruiter control.
               </p>
 
-              {/* Quick Key Guarantees */}
-              <div className="mt-6 flex flex-wrap items-center gap-4 text-xs text-[#D9DADF]">
-                <div className="flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4 text-[#DD700B]" />
+              {/* Staggered Blur-to-Clear Animated Feature Lines */}
+              <div className="mt-6 flex flex-col gap-2.5 text-xs text-[#D9DADF]">
+                <div className="flex items-center gap-2 feature-line-1">
+                  <CheckCircle2 className="w-4 h-4 text-[#DD700B] shrink-0" />
                   <span>No automated rejections</span>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4 text-[#DD700B]" />
+                <div className="flex items-center gap-2 feature-line-2">
+                  <CheckCircle2 className="w-4 h-4 text-[#DD700B] shrink-0" />
                   <span>Objective blind scoring</span>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4 text-[#DD700B]" />
+                <div className="flex items-center gap-2 feature-line-3">
+                  <CheckCircle2 className="w-4 h-4 text-[#DD700B] shrink-0" />
                   <span>Advisory anti-cheat proctoring</span>
                 </div>
               </div>
-
-              {/* Robot with AH on its shirt: Kept in the bottom-left corner */}
-              <div className="mt-8 pt-4 flex items-center justify-start">
-                <RobotWorker />
-              </div>
             </div>
 
-            {/* Right Column: Action Buttons */}
+            {/* Right Column: Action Buttons & Robot directly underneath */}
             <div className="lg:col-span-5 flex flex-col items-start sm:items-center lg:items-end gap-6 pt-2">
-              {/* Action Buttons Box */}
-              <div className="w-full max-w-md neu-raised p-6 rounded-2xl border border-[rgba(217,218,223,0.08)] flex flex-col gap-4">
+              {/* Action Buttons Box (Flat solid colors, thin crisp border, no heavy shadow) */}
+              <div className="w-full max-w-md bg-[#242724] p-6 rounded-2xl border border-[#343834] flex flex-col gap-4">
                 <div className="text-xs font-mono uppercase tracking-wider text-[#8A8B82]">
                   Recruiting Workspace
                 </div>
@@ -168,7 +176,7 @@ export default function HomePage() {
                   <NeuButton
                     variant="primary"
                     size="lg"
-                    className="w-full text-sm font-semibold shadow-[0_4px_16px_rgba(221,112,11,0.35)] flex items-center justify-center gap-2"
+                    className="w-full text-sm font-semibold flex items-center justify-center gap-2"
                   >
                     <span>Enter Recruiting Portal</span>
                     <ArrowRight className="w-4 h-4" />
@@ -180,19 +188,24 @@ export default function HomePage() {
                   <NeuButton
                     variant="secondary"
                     size="lg"
-                    className="w-full text-sm flex items-center justify-center gap-2 border border-[#383A38] hover:border-[#DD700B]/40"
+                    className="w-full text-sm flex items-center justify-center gap-2 border border-[#343834] hover:border-[#DD700B]"
                   >
                     <Mic className="w-4 h-4 text-[#DD700B]" />
                     <span>Launch Voice Screening</span>
                   </NeuButton>
                 </Link>
               </div>
+
+              {/* Robot with AH on its shirt: Positioned underneath the action buttons card as indicated by the red arrow */}
+              <div className="w-full max-w-md flex justify-center lg:justify-start pt-2">
+                <RobotWorker />
+              </div>
             </div>
           </div>
         </section>
 
         {/* Interactive Tabbed Content Section (Switches on click of the 4 sub-tabs) */}
-        <section className="py-8 px-4 sm:px-6 max-w-7xl mx-auto w-full">
+        <section id="tab-panel" className="py-8 px-4 sm:px-6 max-w-7xl mx-auto w-full scroll-mt-24">
           {/* Active Tab Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 border-b border-[#383A38] pb-4">
             <div>
@@ -213,25 +226,34 @@ export default function HomePage() {
               </h2>
             </div>
 
-            {/* Quick Switcher Indicators */}
-            <div className="flex items-center gap-1.5 self-start sm:self-center">
-              {TABS.map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => setActiveTab(t.id)}
-                  aria-label={`Switch to ${t.label}`}
-                  className={`h-2 rounded-full transition-all ${
-                    activeTab === t.id ? "w-6 bg-[#DD700B]" : "w-2 bg-[#383A38] hover:bg-[#8A8B82]"
-                  }`}
-                />
-              ))}
+            {/* Quick Switcher Buttons */}
+            <div className="flex items-center gap-1.5 self-start sm:self-center flex-wrap">
+              {TABS.map((t) => {
+                const Icon = t.icon;
+                const isSelected = activeTab === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => handleTabSelect(t.id)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                      isSelected
+                        ? "bg-[#DD700B] text-[#1E201E] font-bold"
+                        : "bg-[#242724] text-[#8A8B82] hover:text-[#D9DADF] border border-[#343834]"
+                    }`}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                    <span>{t.label}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
           {/* Tab 1: Hiring Cockpit */}
           {activeTab === "cockpit" && (
-            <div className="neu-raised rounded-2xl border border-[rgba(217,218,223,0.08)] overflow-hidden shadow-2xl animate-fade-in">
-              <div className="bg-[#232623] px-6 py-3.5 border-b border-[#383A38] flex items-center justify-between">
+            <div className="bg-[#242724] rounded-2xl border border-[#343834] overflow-hidden animate-fade-in">
+              <div className="bg-[#1E201E] px-6 py-3.5 border-b border-[#343834] flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-2.5 h-2.5 rounded-full bg-[#E57373]" />
                   <div className="w-2.5 h-2.5 rounded-full bg-[#FCF8D8]" />
@@ -249,7 +271,7 @@ export default function HomePage() {
                 {/* Candidate List (7 cols) */}
                 <div className="lg:col-span-7 flex flex-col gap-3">
                   {/* Candidate 1: Selected */}
-                  <div className="neu-inset p-4 rounded-xl border-l-4 border-l-[#DD700B] flex flex-col gap-3">
+                  <div className="bg-[#1E201E] border border-[#2E312E] p-4 rounded-xl border-l-4 border-l-[#DD700B] flex flex-col gap-3">
                     <div className="flex items-start justify-between">
                       <div>
                         <div className="flex items-center gap-2">
@@ -267,15 +289,15 @@ export default function HomePage() {
                     </div>
 
                     <div className="grid grid-cols-3 gap-2 pt-2 border-t border-[#383A38] text-xs">
-                      <div className="p-2 rounded bg-[#2A2D2A]">
+                      <div className="p-2 rounded bg-[#242724]">
                         <span className="text-[10px] text-[#8A8B82] block">Technical Rubric</span>
                         <span className="font-semibold text-[#D9DADF]">95 / 100</span>
                       </div>
-                      <div className="p-2 rounded bg-[#2A2D2A]">
+                      <div className="p-2 rounded bg-[#242724]">
                         <span className="text-[10px] text-[#8A8B82] block">Voice Screening</span>
                         <span className="font-semibold text-[#D9DADF]">Completed (4/4)</span>
                       </div>
-                      <div className="p-2 rounded bg-[#2A2D2A]">
+                      <div className="p-2 rounded bg-[#242724]">
                         <span className="text-[10px] text-[#8A8B82] block">Integrity Signals</span>
                         <span className="font-semibold text-[#8FD19E]">Clean &bull; 0 Flags</span>
                       </div>
@@ -283,7 +305,7 @@ export default function HomePage() {
                   </div>
 
                   {/* Candidate 2 */}
-                  <div className="neu-raised p-3.5 rounded-xl flex items-center justify-between opacity-80 hover:opacity-100 transition-opacity">
+                  <div className="bg-[#1E201E] border border-[#2E312E] p-3.5 rounded-xl flex items-center justify-between opacity-80 hover:opacity-100 transition-opacity">
                     <div>
                       <h4 className="font-bold text-sm text-[#D9DADF]">Sarah Lin</h4>
                       <p className="text-xs text-[#8A8B82]">5 yrs exp &bull; Product Engineer</p>
@@ -295,7 +317,7 @@ export default function HomePage() {
                   </div>
 
                   {/* Candidate 3 */}
-                  <div className="neu-raised p-3.5 rounded-xl flex items-center justify-between opacity-80 hover:opacity-100 transition-opacity">
+                  <div className="bg-[#1E201E] border border-[#2E312E] p-3.5 rounded-xl flex items-center justify-between opacity-80 hover:opacity-100 transition-opacity">
                     <div>
                       <h4 className="font-bold text-sm text-[#D9DADF]">David Kim</h4>
                       <p className="text-xs text-[#8A8B82]">6 yrs exp &bull; Backend Specialist</p>
@@ -308,7 +330,7 @@ export default function HomePage() {
                 </div>
 
                 {/* Recruiter Decision Panel (5 cols) */}
-                <div className="lg:col-span-5 flex flex-col justify-between neu-raised p-5 rounded-xl border border-[#383A38]">
+                <div className="lg:col-span-5 flex flex-col justify-between bg-[#1E201E] p-5 rounded-xl border border-[#383A38]">
                   <div>
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
@@ -377,7 +399,7 @@ export default function HomePage() {
 
           {/* Tab 2: Job & Rubrics */}
           {activeTab === "rubrics" && (
-            <div className="neu-raised rounded-2xl border border-[rgba(217,218,223,0.08)] p-6 sm:p-8 animate-fade-in">
+            <div className="bg-[#242724] rounded-2xl border border-[#343834] p-6 sm:p-8 animate-fade-in">
               <div className="max-w-3xl mb-8">
                 <span className="text-xs font-mono uppercase text-[#DD700B] font-bold tracking-wider">
                   Objective Evaluation Criteria
@@ -392,7 +414,7 @@ export default function HomePage() {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* Rubric Dimension 1 */}
-                <div className="neu-inset p-5 rounded-xl flex flex-col justify-between">
+                <div className="bg-[#1E201E] border border-[#2E312E] p-5 rounded-xl flex flex-col justify-between">
                   <div>
                     <div className="flex items-center justify-between mb-3">
                       <span className="text-xs font-bold text-[#DD700B] uppercase font-mono">Weight: 40%</span>
@@ -409,7 +431,7 @@ export default function HomePage() {
                 </div>
 
                 {/* Rubric Dimension 2 */}
-                <div className="neu-inset p-5 rounded-xl flex flex-col justify-between">
+                <div className="bg-[#1E201E] border border-[#2E312E] p-5 rounded-xl flex flex-col justify-between">
                   <div>
                     <div className="flex items-center justify-between mb-3">
                       <span className="text-xs font-bold text-[#FCF8D8] uppercase font-mono">Weight: 35%</span>
@@ -417,7 +439,7 @@ export default function HomePage() {
                     </div>
                     <h4 className="font-bold text-sm text-[#D9DADF] mb-1.5">Modern Full-Stack Architecture</h4>
                     <p className="text-xs text-[#8A8B82] leading-relaxed">
-                      Measures proficiency with Next.js App Router, clean API contracts, state management, and responsive neumorphic design.
+                      Measures proficiency with Next.js App Router, clean API contracts, state management, and responsive design.
                     </p>
                   </div>
                   <div className="mt-4 pt-3 border-t border-[#383A38] text-[11px] text-[#FCF8D8]">
@@ -426,7 +448,7 @@ export default function HomePage() {
                 </div>
 
                 {/* Rubric Dimension 3 */}
-                <div className="neu-inset p-5 rounded-xl flex flex-col justify-between">
+                <div className="bg-[#1E201E] border border-[#2E312E] p-5 rounded-xl flex flex-col justify-between">
                   <div>
                     <div className="flex items-center justify-between mb-3">
                       <span className="text-xs font-bold text-[#8FD19E] uppercase font-mono">Weight: 25%</span>
@@ -459,11 +481,11 @@ export default function HomePage() {
 
           {/* Tab 3: Voice Screening */}
           {activeTab === "screening" && (
-            <div className="neu-raised rounded-2xl border border-[rgba(217,218,223,0.08)] p-6 sm:p-8 animate-fade-in">
+            <div className="bg-[#242724] rounded-2xl border border-[#343834] p-6 sm:p-8 animate-fade-in">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
                 {/* Voice Visualizer Demo (7 cols) */}
                 <div className="lg:col-span-7 flex flex-col gap-4">
-                  <div className="neu-inset p-5 rounded-xl">
+                  <div className="bg-[#1E201E] border border-[#2E312E] p-5 rounded-xl">
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-2">
                         <Mic className="w-4 h-4 text-[#DD700B] animate-pulse" />
@@ -472,7 +494,7 @@ export default function HomePage() {
                       <span className="text-[10px] font-mono text-[#8A8B82]">Question 2 of 4</span>
                     </div>
 
-                    <div className="p-4 rounded-lg bg-[#2A2D2A] border border-[#383A38] text-sm text-[#FCF8D8] leading-relaxed">
+                    <div className="p-4 rounded-lg bg-[#242724] border border-[#343834] text-sm text-[#FCF8D8] leading-relaxed">
                       &quot;How do you guarantee idempotency and avoid race conditions in distributed payment webhooks?&quot;
                     </div>
 
@@ -490,7 +512,7 @@ export default function HomePage() {
                     </div>
 
                     {/* Live STT Transcript */}
-                    <div className="p-3.5 rounded-lg bg-[#1E201E] border border-[#383A38]">
+                    <div className="p-3.5 rounded-lg bg-[#1E201E] border border-[#343834]">
                       <span className="text-[10px] uppercase font-mono text-[#8A8B82] block mb-1">
                         Candidate Answer (Live Speech-to-Text)
                       </span>
@@ -545,7 +567,7 @@ export default function HomePage() {
 
           {/* Tab 4: Integrity Radar */}
           {activeTab === "integrity" && (
-            <div className="neu-raised rounded-2xl border border-[rgba(217,218,223,0.08)] p-6 sm:p-8 animate-fade-in">
+            <div className="bg-[#242724] rounded-2xl border border-[#343834] p-6 sm:p-8 animate-fade-in">
               <div className="max-w-3xl mb-8">
                 <span className="text-xs font-mono uppercase text-[#DD700B] font-bold tracking-wider">
                   Fair &amp; Respectful Proctoring
@@ -559,32 +581,32 @@ export default function HomePage() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="neu-inset p-4 rounded-xl text-center">
+                <div className="bg-[#1E201E] border border-[#2E312E] p-4 rounded-xl text-center">
                   <div className="text-2xl font-bold text-[#8FD19E]">98%</div>
                   <div className="text-xs text-[#D9DADF] font-semibold mt-1">Trust Score</div>
                   <div className="text-[10px] text-[#8A8B82] mt-0.5">High integrity session</div>
                 </div>
 
-                <div className="neu-inset p-4 rounded-xl text-center">
+                <div className="bg-[#1E201E] border border-[#2E312E] p-4 rounded-xl text-center">
                   <div className="text-2xl font-bold text-[#FCF8D8]">0</div>
                   <div className="text-xs text-[#D9DADF] font-semibold mt-1">Tab Switches</div>
                   <div className="text-[10px] text-[#8A8B82] mt-0.5">Continuous focus</div>
                 </div>
 
-                <div className="neu-inset p-4 rounded-xl text-center">
+                <div className="bg-[#1E201E] border border-[#2E312E] p-4 rounded-xl text-center">
                   <div className="text-2xl font-bold text-[#8FD19E]">Passed</div>
                   <div className="text-xs text-[#D9DADF] font-semibold mt-1">Prompt Injection Shield</div>
                   <div className="text-[10px] text-[#8A8B82] mt-0.5">Clean candidate inputs</div>
                 </div>
 
-                <div className="neu-inset p-4 rounded-xl text-center">
+                <div className="bg-[#1E201E] border border-[#2E312E] p-4 rounded-xl text-center">
                   <div className="text-2xl font-bold text-[#DD700B]">100%</div>
                   <div className="text-xs text-[#D9DADF] font-semibold mt-1">Audit Trail</div>
                   <div className="text-[10px] text-[#8A8B82] mt-0.5">Immutable record</div>
                 </div>
               </div>
 
-              <div className="mt-8 p-4 rounded-xl bg-[#232623] border border-[#383A38] flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="mt-8 p-4 rounded-xl bg-[#1E201E] border border-[#343834] flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                   <Lock className="w-5 h-5 text-[#DD700B] shrink-0" />
                   <p className="text-xs text-[#8A8B82]">
@@ -601,56 +623,14 @@ export default function HomePage() {
           )}
         </section>
 
-        {/* Simplified 3-Step Workflow: Plain-Language & Spacious */}
-        <section className="py-16 px-4 sm:px-6 max-w-7xl mx-auto w-full">
-          <div className="text-center max-w-2xl mx-auto mb-12">
-            <h3 className="text-xs font-mono uppercase tracking-widest text-[#DD700B] mb-2 font-bold">
-              Simple 3-Step Hiring
-            </h3>
-            <p className="text-2xl sm:text-3xl font-extrabold text-[#D9DADF]">
-              How asanHire Simplifies Your Recruitment
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Step 1 */}
-            <div className="neu-inset p-6 rounded-2xl flex flex-col gap-3">
-              <span className="w-9 h-9 rounded-xl bg-[#DD700B] text-[#1E201E] font-extrabold flex items-center justify-center text-sm shadow-[0_2px_8px_rgba(221,112,11,0.3)]">
-                1
-              </span>
-              <h4 className="font-bold text-base text-[#D9DADF]">Define Criteria</h4>
-              <p className="text-xs sm:text-sm text-[#8A8B82] leading-relaxed">
-                Post your job description. The platform synthesizes an objective scoring rubric with weighted skills.
-              </p>
-            </div>
-
-            {/* Step 2 */}
-            <div className="neu-inset p-6 rounded-2xl flex flex-col gap-3">
-              <span className="w-9 h-9 rounded-xl bg-[#DD700B] text-[#1E201E] font-extrabold flex items-center justify-center text-sm shadow-[0_2px_8px_rgba(221,112,11,0.3)]">
-                2
-              </span>
-              <h4 className="font-bold text-base text-[#D9DADF]">Autonomous Screening</h4>
-              <p className="text-xs sm:text-sm text-[#8A8B82] leading-relaxed">
-                Candidates complete a browser-based voice interview with anti-cheat monitoring on their own schedule.
-              </p>
-            </div>
-
-            {/* Step 3 */}
-            <div className="neu-inset p-6 rounded-2xl flex flex-col gap-3">
-              <span className="w-9 h-9 rounded-xl bg-[#DD700B] text-[#1E201E] font-extrabold flex items-center justify-center text-sm shadow-[0_2px_8px_rgba(221,112,11,0.3)]">
-                3
-              </span>
-              <h4 className="font-bold text-base text-[#D9DADF]">Human Decides</h4>
-              <p className="text-xs sm:text-sm text-[#8A8B82] leading-relaxed">
-                Recruiters review AI rankings, listen to interview snippets, and execute final hiring decisions with one click.
-              </p>
-            </div>
-          </div>
+        {/* Human Recruiter & AI Robot Interview Orchestration (Replaces Simple 3-Step Section) */}
+        <section className="py-12 px-4 sm:px-6 max-w-7xl mx-auto w-full">
+          <CollaborationIllustration />
         </section>
 
         {/* Clear Primary Call to Action */}
-        <section className="py-16 px-4 sm:px-6 max-w-5xl mx-auto w-full text-center">
-          <div className="neu-raised p-8 sm:p-12 rounded-3xl border border-[#DD700B]/30 flex flex-col items-center gap-5">
+        <section className="py-14 px-4 sm:px-6 max-w-5xl mx-auto w-full text-center">
+          <div className="bg-[#242724] p-8 sm:p-12 rounded-3xl border border-[#343834] flex flex-col items-center gap-5">
             <h2 className="text-2xl sm:text-4xl font-extrabold text-[#D9DADF]">
               Ready to Accelerate Your Hiring?
             </h2>
@@ -662,7 +642,7 @@ export default function HomePage() {
                 <NeuButton
                   size="lg"
                   variant="primary"
-                  className="shadow-[0_4px_20px_rgba(221,112,11,0.4)] px-7 py-3 text-sm font-semibold flex items-center gap-2"
+                  className="px-7 py-3 text-sm font-semibold flex items-center gap-2"
                 >
                   <span>Enter Recruiting Portal</span>
                   <ArrowRight className="w-4 h-4" />
@@ -672,7 +652,7 @@ export default function HomePage() {
                 <NeuButton
                   size="lg"
                   variant="secondary"
-                  className="px-6 py-3 text-sm border border-[#383A38]"
+                  className="px-6 py-3 text-sm border border-[#343834]"
                 >
                   <Mic className="w-4 h-4 text-[#DD700B] mr-2" />
                   Try Voice Screening
