@@ -55,8 +55,15 @@ async def get_public_job(job_id: str) -> JobPublicResponse:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
 
     row = res.data[0]
+    if row.get("status") in {"deleting", "deleted"}:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
     if row.get("status") != "open":
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
+
+    job_status = str(row["status"])
+    deadline_dt = _parse_iso_datetime(row["deadline"])
+    if deadline_dt <= datetime.now(timezone.utc):
+        job_status = "closed"
 
     return JobPublicResponse(
         id=str(row["id"]),
@@ -64,7 +71,7 @@ async def get_public_job(job_id: str) -> JobPublicResponse:
         description=row.get("description", ""),
         skills=row.get("skills") or [],
         deadline=row["deadline"],
-        status=row["status"],
+        status=job_status,
     )
 
 
@@ -132,10 +139,15 @@ async def _handle_application_submission(
         )
 
     job_row = job_res.data[0]
+    if job_row.get("status") in {"deleting", "deleted"}:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Job not found",
+        )
     if job_row.get("status") != "open":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="This job is not accepting applications",
+            detail="This job is not accepting applications (applications are closed for this position)",
         )
 
     deadline_dt = _parse_iso_datetime(job_row["deadline"])
@@ -143,7 +155,7 @@ async def _handle_application_submission(
     if deadline_dt <= now_utc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="This job is not accepting applications",
+            detail="This job is not accepting applications (applications are closed for this position)",
         )
 
     # 5. Reject duplicate applications (job_id + lower(email)) with a generic message

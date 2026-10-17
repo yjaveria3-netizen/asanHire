@@ -118,6 +118,12 @@ def _load_candidate_and_job(client: Any, candidate_id: str) -> Tuple[Dict[str, A
         job_res = client.table("jobs").select("*").eq("id", str(job_id)).execute()
         if job_res and job_res.data:
             job = job_res.data[0]
+            if job.get("status") in {"deleting", "deleted"}:
+                raise GENERIC_NOT_FOUND
+        else:
+            raise GENERIC_NOT_FOUND
+    else:
+        raise GENERIC_NOT_FOUND
 
     return candidate, job
 

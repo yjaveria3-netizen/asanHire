@@ -136,22 +136,40 @@ async def invite_candidate_with_token(
     }
 
 
-async def schedule_job(job_id: str, hr_sender_email: Optional[str] = None) -> Dict[str, Any]:
+async def schedule_job(
+    job_id: str,
+    hr_sender_email: Optional[str] = None,
+    is_auto_run: bool = False,
+    actor: str = "system:scheduling_agent",
+) -> Dict[str, Any]:
     """
     Deterministic Scheduling Agent (no LLM):
     - Uses FastMCP tools (get_job_rubric, get_ranked_candidates, send_invite_email).
+    - Checks job status before each invitation; aborts cleanly if job is in 'deleting' state.
     - Picks top N candidates with status in ('applied', 'shortlisted') and
       effective_score >= min_score (effective_score = hr_score_override if set else ai_score).
     - Breaks ties by earliest application (created_at ascending).
     - For each: creates an interview row with secrets.token_urlsafe(32) (storing only SHA-256 hash,
       expires_at = now + 48h), sets candidate status 'invited', sends invite email via Resend
       with link FRONTEND_URL/interview/{token}, writes email_log, agent_runs (agent='scheduling'),
-      and audit_log (actor='system:scheduling_agent').
+      and audit_log ('scheduler_run_auto' for automatic runs, 'run_scheduler' for manual runs).
     - Sets jobs.scheduler_ran_at = now().
     """
     from app.mcp_server import call_mcp_tool
 
     client = get_supabase_service_client()
+
+    # Re-check job status before proceeding
+    job_check = client.table("jobs").select("id, owner_id, status").eq("id", job_id).execute()
+    if not job_check.data:
+        return {"job_id": job_id, "invited_count": 0, "aborted": True}
+    job_status = str(job_check.data[0].get("status") or "").lower()
+    if job_status in {"deleting", "deleted"}:
+        logger.warning(f"Aborting schedule_job for job {job_id}: status is {job_status}")
+        return {"job_id": job_id, "invited_count": 0, "aborted": True}
+
+    owner_id = str(job_check.data[0].get("owner_id") or "")
+
     job_info = await call_mcp_tool("get_job_rubric", {"job_id": job_id})
     top_n = int(job_info.get("top_n", 5))
     min_score = float(job_info.get("min_score", 60))
@@ -174,6 +192,12 @@ async def schedule_job(job_id: str, hr_sender_email: Optional[str] = None) -> Di
     invited_ids: List[str] = []
 
     for cand in selected:
+        # Re-check job status before each candidate invite
+        chk = client.table("jobs").select("status").eq("id", job_id).execute()
+        if not chk.data or str(chk.data[0].get("status") or "").lower() in {"deleting", "deleted"}:
+            logger.warning(f"Aborting invites mid-run for job {job_id}: job deleted")
+            break
+
         cid = str(cand.get("candidate_id") or cand.get("id"))
         await call_mcp_tool("send_invite_email", {"candidate_id": cid})
         invited_ids.append(cid)
@@ -196,6 +220,15 @@ async def schedule_job(job_id: str, hr_sender_email: Optional[str] = None) -> Di
 
     now_iso = datetime.now(timezone.utc).isoformat()
     client.table("jobs").update({"scheduler_ran_at": now_iso}).eq("id", job_id).execute()
+
+    if is_auto_run:
+        write_audit_log(
+            owner_id=owner_id,
+            actor="system",
+            action="scheduler_run_auto",
+            job_id=job_id,
+            reason=f"Automatic scheduler run invited {len(invited_ids)} candidate(s) at deadline",
+        )
 
     return {
         "job_id": job_id,

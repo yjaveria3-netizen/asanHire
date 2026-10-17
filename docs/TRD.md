@@ -130,14 +130,17 @@ stateDiagram-v2
 * **Security Control:** Untrusted resume text is isolated within `<untrusted_candidate_resume>` delimiters; system prompt warns model to ignore prompt-injection instructions found within candidate text.
 
 ### 5.3 Scheduling Agent (Rule-based Python Code)
-* **Trigger:** APScheduler cron checking active jobs where `deadline <= now()`.
+* **Trigger:** APScheduler background worker ticking every 60 seconds and immediate catch-up pass on startup.
+* **Deadline & Authority:** Server clock (UTC) is the sole authority. The API strictly requires ISO 8601 strings with timezone offset or Z (`validate_deadline_future`). Moving a deadline into the future re-arms the scheduler by setting `scheduler_ran_at = null`.
+* **Atomic Claim Lock:** Jobs are claimed via atomic query (`UPDATE jobs SET scheduler_ran_at = now_iso WHERE id = job_id AND scheduler_ran_at IS NULL AND status = 'open'`), preventing concurrent duplicate executions across workers.
 * **Logic:**
-  1. Retrieve all candidates with `status IN ('applied', 'shortlisted')`.
-  2. Compute `effective_score = coalesce(manual_score_override, resume_score)`.
-  3. Filter by `effective_score >= job.min_score`.
-  4. Sort descending by `effective_score`.
-  5. Select top $N$ candidates (`limit = job.top_n`).
-  6. Generate expiring single-use token, update status to `invited`, and dispatch email via Resend.
+  1. Guard against deleting/deleted jobs.
+  2. Retrieve all candidates for the job with status `applied` or `shortlisted`.
+  3. Compute `effective_score = coalesce(hr_score_override, ai_score)`.
+  4. Filter by `effective_score >= job.min_score`.
+  5. Sort descending by `effective_score` (nulls last).
+  6. Select top $N$ candidates (`limit = job.top_n`). Candidates already invited are never re-invited.
+  7. Generate expiring single-use token, update status to `invited`, record audit log (`action='scheduler_run_auto'` or `'run_scheduler'`), log `agent_runs(agent='scheduling', actor='system')`, and dispatch email via Resend.
 
 ### 5.4 Interview Agent (Groq)
 * **Input:** Conversation history, Job Rubric, Candidate Resume highlights, Question index.

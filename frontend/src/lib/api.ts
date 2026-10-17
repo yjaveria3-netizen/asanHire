@@ -1,4 +1,4 @@
-import { Job, Candidate } from "./types";
+import { Job, Candidate, JobProgress, DeletePreview, HROverrideEvent, AdminOverview, AdminHRUser, AdminCandidateLookupResult } from "./types";
 import { createClient } from "./supabase/client";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -280,6 +280,52 @@ export const api = {
     return api.createHRJob(data);
   },
 
+  getJobProgress: async (jobId: string): Promise<JobProgress> => {
+    return request<JobProgress>(`/api/hr/jobs/${jobId}/progress`).catch(() =>
+      request<JobProgress>(`/hr/jobs/${jobId}/progress`)
+    );
+  },
+
+  updateJob: async (jobId: string, data: Partial<Job>): Promise<Job> => {
+    return request<Job>(`/api/hr/jobs/${jobId}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }).catch(() =>
+      request<Job>(`/hr/jobs/${jobId}`, {
+        method: "PATCH",
+        body: JSON.stringify(data),
+      })
+    );
+  },
+
+  getDeletePreview: async (jobId: string): Promise<DeletePreview> => {
+    return request<DeletePreview>(`/api/hr/jobs/${jobId}/delete-preview`).catch(() =>
+      request<DeletePreview>(`/hr/jobs/${jobId}/delete-preview`)
+    );
+  },
+
+  deleteJob: async (jobId: string, confirmTitle: string): Promise<{ deleted: boolean; counts: Record<string, number> }> => {
+    return request<{ deleted: boolean; counts: Record<string, number> }>(`/api/hr/jobs/${jobId}`, {
+      method: "DELETE",
+      body: JSON.stringify({ confirm_title: confirmTitle }),
+    }).catch(() =>
+      request<{ deleted: boolean; counts: Record<string, number> }>(`/hr/jobs/${jobId}`, {
+        method: "DELETE",
+        body: JSON.stringify({ confirm_title: confirmTitle }),
+      })
+    );
+  },
+
+  runScheduler: async (jobId: string): Promise<any> => {
+    return request<any>(`/api/hr/jobs/${jobId}/run-scheduler`, {
+      method: "POST",
+    }).catch(() =>
+      request<any>(`/hr/jobs/${jobId}/run-scheduler`, {
+        method: "POST",
+      })
+    );
+  },
+
   getHRCandidates: async (jobId: string): Promise<Candidate[]> => {
     return request<Candidate[]>(`/api/hr/jobs/${jobId}/candidates`).catch(() => [
       {
@@ -331,12 +377,21 @@ export const api = {
     }));
   },
 
-  submitDecision: async (candidateId: string, decision: string, sendEmail: boolean, notes: string) => {
-    const payload = {
+  submitDecision: async (
+    candidateId: string,
+    decision: string,
+    sendEmail: boolean,
+    notes: string,
+    reasonCategory?: string
+  ) => {
+    const payload: any = {
       decision: decision.toLowerCase(),
       reason: notes || "Decision made by HR",
       send_email: sendEmail,
     };
+    if (reasonCategory) {
+      payload.reason_category = reasonCategory;
+    }
     return request<any>(`/hr/candidates/${candidateId}/decision`, {
       method: "POST",
       body: JSON.stringify(payload),
@@ -350,10 +405,16 @@ export const api = {
       .catch(() => ({ success: true, decision, send_email: sendEmail }));
   },
 
-  overrideScore: async (candidateId: string, manual_score: number, reason: string) => {
+  overrideScore: async (
+    candidateId: string,
+    manual_score: number,
+    reason: string,
+    reasonCategory: string = "recruiter_discretion"
+  ) => {
     const payload = {
       score: manual_score,
       note: reason || "Score overridden by HR",
+      reason_category: reasonCategory,
     };
     return request<any>(`/hr/candidates/${candidateId}/score`, {
       method: "PATCH",
@@ -368,10 +429,16 @@ export const api = {
       .catch(() => ({ success: true, score: manual_score }));
   },
 
-  overrideStatus: async (candidateId: string, status: string, reason: string) => {
+  overrideStatus: async (
+    candidateId: string,
+    status: string,
+    reason: string,
+    reasonCategory: string = "recruiter_discretion"
+  ) => {
     const payload = {
       status,
       reason: reason || "Status changed by HR",
+      reason_category: reasonCategory,
     };
     return request<any>(`/hr/candidates/${candidateId}/status`, {
       method: "PATCH",
@@ -386,43 +453,56 @@ export const api = {
       .catch(() => ({ success: true, status }));
   },
 
-  inviteCandidate: async (candidateId: string, send_email = true) => {
+  inviteCandidate: async (
+    candidateId: string,
+    send_email = true,
+    reason = "Manual invitation by HR",
+    reasonCategory = "recruiter_discretion"
+  ) => {
     return request<any>(`/hr/candidates/${candidateId}/invite`, {
       method: "POST",
-      body: JSON.stringify({ send_email, reason: "Manual invitation by HR" }),
+      body: JSON.stringify({ send_email, reason, reason_category: reasonCategory }),
     })
       .catch(() =>
         request<any>(`/api/hr/candidates/${candidateId}/invite`, {
           method: "POST",
-          body: JSON.stringify({ send_email, reason: "Manual invitation by HR" }),
+          body: JSON.stringify({ send_email, reason, reason_category: reasonCategory }),
         })
       )
       .catch(() => ({ success: true, status: "invited" }));
   },
 
-  cancelInvite: async (candidateId: string, reason: string) => {
+  cancelInvite: async (
+    candidateId: string,
+    reason: string,
+    reasonCategory: string = "recruiter_discretion"
+  ) => {
     return request<any>(`/hr/candidates/${candidateId}/cancel-invite`, {
       method: "POST",
-      body: JSON.stringify({ reason: reason || "Invite cancelled by HR" }),
+      body: JSON.stringify({ reason: reason || "Invite cancelled by HR", reason_category: reasonCategory }),
     })
       .catch(() =>
         request<any>(`/api/hr/candidates/${candidateId}/cancel-invite`, {
           method: "POST",
-          body: JSON.stringify({ reason: reason || "Invite cancelled by HR" }),
+          body: JSON.stringify({ reason: reason || "Invite cancelled by HR", reason_category: reasonCategory }),
         })
       )
       .catch(() => ({ success: true, status: "shortlisted" }));
   },
 
-  allowRetry: async (candidateId: string, reason: string) => {
+  allowRetry: async (
+    candidateId: string,
+    reason: string,
+    reasonCategory: string = "technical_issue"
+  ) => {
     return request<any>(`/hr/candidates/${candidateId}/allow-retry`, {
       method: "POST",
-      body: JSON.stringify({ reason: reason || "Interview retry allowed by HR" }),
+      body: JSON.stringify({ reason: reason || "Interview retry allowed by HR", reason_category: reasonCategory }),
     })
       .catch(() =>
         request<any>(`/api/hr/candidates/${candidateId}/allow-retry`, {
           method: "POST",
-          body: JSON.stringify({ reason: reason || "Interview retry allowed by HR" }),
+          body: JSON.stringify({ reason: reason || "Interview retry allowed by HR", reason_category: reasonCategory }),
         })
       )
       .catch(() => ({ success: true, status: "invited", retry_allowed: true }));
@@ -463,6 +543,128 @@ export const api = {
   getAgentRuns: async (jobId: string) => {
     return request<any>(`/api/hr/agent-runs?job_id=${jobId}`).catch(() => []);
   },
+
+  // HR Overrides
+  getHROverrides: async (): Promise<HROverrideEvent[]> => {
+    return request<HROverrideEvent[]>("/hr/overrides")
+      .catch(() => request<HROverrideEvent[]>("/api/hr/overrides"))
+      .catch(() => []);
+  },
+
+  answerAdminQuestion: async (overrideId: string, questionId: string, answer: string): Promise<any> => {
+    return request<any>(`/hr/overrides/${overrideId}/questions/${questionId}/answer`, {
+      method: "POST",
+      body: JSON.stringify({ answer }),
+    }).catch(() =>
+      request<any>(`/api/hr/overrides/${overrideId}/questions/${questionId}/answer`, {
+        method: "POST",
+        body: JSON.stringify({ answer }),
+      })
+    );
+  },
+
+  // User Profile
+  getMe: async (): Promise<any> => {
+    return request<any>("/me")
+      .catch(() => request<any>("/api/me"))
+      .catch(() => ({
+        id: "mock-user-id",
+        email: "hr@asanhire.dev",
+        role: "recruiter",
+        must_change_password: false,
+        reply_to_enabled: true,
+      }));
+  },
+
+  // Admin APIs
+  adminChangePassword: async (currentPassword: string, newPassword: string): Promise<any> => {
+    return request<any>("/admin/change-password", {
+      method: "POST",
+      body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+    }).catch(() =>
+      request<any>("/api/admin/change-password", {
+        method: "POST",
+        body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+      })
+    );
+  },
+
+  getAdminOverview: async (): Promise<AdminOverview> => {
+    return request<AdminOverview>("/admin/overview")
+      .catch(() => request<AdminOverview>("/api/admin/overview"))
+      .catch(() => ({
+        total_hr_users: 12,
+        active_jobs: 8,
+        closed_jobs: 14,
+        total_candidates: 142,
+        completed_interviews: 68,
+        total_decisions: 52,
+        overrides_this_week: 5,
+        pending_access_requests: 2,
+        emails_sent_today: 19,
+        trends_14d: {
+          dates: Array.from({ length: 14 }, (_, i) => {
+            const d = new Date();
+            d.setDate(d.getDate() - (13 - i));
+            return d.toISOString().split("T")[0];
+          }),
+          applications: [4, 6, 8, 12, 10, 15, 7, 9, 14, 18, 11, 16, 20, 13],
+          jobs_created: [1, 0, 2, 1, 0, 3, 0, 1, 2, 0, 1, 0, 2, 1],
+        },
+      }));
+  },
+
+  getAdminHRUsers: async (): Promise<AdminHRUser[]> => {
+    return request<AdminHRUser[]>("/admin/hr-users")
+      .catch(() => request<AdminHRUser[]>("/api/admin/hr-users"))
+      .catch(() => []);
+  },
+
+  getAdminHRUserDetail: async (id: string): Promise<any> => {
+    return request<any>(`/admin/hr-users/${id}`)
+      .catch(() => request<any>(`/api/admin/hr-users/${id}`))
+      .catch(() => null);
+  },
+
+  getAdminCandidateLookup: async (emailKey: string): Promise<AdminCandidateLookupResult> => {
+    return request<AdminCandidateLookupResult>(`/admin/candidates/${emailKey}`)
+      .catch(() => request<AdminCandidateLookupResult>(`/api/admin/candidates/${emailKey}`))
+      .catch(() => ({
+        email_key: emailKey,
+        is_blocked: false,
+        applications: [],
+      }));
+  },
+
+  getAdminOverrides: async (params?: Record<string, string>): Promise<HROverrideEvent[]> => {
+    const qs = params ? "?" + new URLSearchParams(params).toString() : "";
+    return request<HROverrideEvent[]>(`/admin/overrides${qs}`)
+      .catch(() => request<HROverrideEvent[]>(`/api/admin/overrides${qs}`))
+      .catch(() => []);
+  },
+
+  reviewAdminOverride: async (overrideId: string): Promise<any> => {
+    return request<any>(`/admin/overrides/${overrideId}/review`, {
+      method: "POST",
+    }).catch(() =>
+      request<any>(`/api/admin/overrides/${overrideId}/review`, {
+        method: "POST",
+      })
+    );
+  },
+
+  askAdminOverrideQuestion: async (overrideId: string, question: string): Promise<any> => {
+    return request<any>(`/admin/overrides/${overrideId}/question`, {
+      method: "POST",
+      body: JSON.stringify({ question }),
+    }).catch(() =>
+      request<any>(`/api/admin/overrides/${overrideId}/question`, {
+        method: "POST",
+        body: JSON.stringify({ question }),
+      })
+    );
+  },
 };
 
 export default api;
+

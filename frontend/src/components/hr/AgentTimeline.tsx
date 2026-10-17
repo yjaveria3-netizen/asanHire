@@ -10,12 +10,12 @@ interface AgentTimelineProps {
 // OWNER: M1 (frontend developer)
 export const AgentTimeline: React.FC<AgentTimelineProps> = ({ currentStage = "supervisor" }) => {
   const stages = [
-    { id: "rubric", name: "Rubric Agent", engine: "Gemini 1.5", icon: Sparkles },
-    { id: "matcher", name: "Resume Matcher", engine: "Gemini 1.5", icon: UserCheck },
+    { id: "rubric", name: "Rubric Agent", engine: "Gemini 2.5", icon: Sparkles },
+    { id: "matcher", name: "Resume Matcher", engine: "Gemini 2.5", icon: UserCheck },
     { id: "scheduling", name: "Auto Scheduler", engine: "Rule-based", icon: Calendar },
     { id: "interview", name: "Voice Interview", engine: "Groq Llama 3.3", icon: Clock },
     { id: "guardian", name: "Guardian Proctor", engine: "Passive Event", icon: Shield },
-    { id: "supervisor", name: "Supervisor Report", engine: "Gemini 1.5", icon: CheckCircle2 },
+    { id: "supervisor", name: "Supervisor Report", engine: "Gemini 2.5", icon: CheckCircle2 },
   ];
 
   return (

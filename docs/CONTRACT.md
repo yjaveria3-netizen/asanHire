@@ -163,72 +163,95 @@ All endpoints require `Authorization: Bearer <supabase_jwt>`.
 ### 4.1 Jobs Management
 * `GET /api/hr/jobs`: List all jobs owned by current HR user.
 * `POST /api/hr/jobs`: Create new job and invoke Rubric Agent.
-  - Body: `{ "title": str, "department": str, "description": str, "requirements": str, "top_n": int, "min_score": float, "deadline": str }`
-* `GET /api/hr/jobs/{job_id}`: Get job details including candidate count and rubric.
+  - Body: `{ "title": str, "description": str, "skills": list[str], "experience_level": str, "top_n": int, "min_score": int, "deadline": str (ISO 8601 with timezone offset or Z), "auto_invite": bool }`
+* `GET /api/hr/jobs/{job_id}`: Get job details including candidate count, rubric, `deadline_at`, `server_time`, `seconds_until_deadline`, `scheduler_state`.
+* `PATCH /api/hr/jobs/{job_id}`: Update job settings and deadline. Moving deadline into the future re-arms the scheduler (`scheduler_ran_at = null`). Requires strict ISO 8601 with timezone offset or Z.
+* `GET /api/hr/jobs/{job_id}/progress`: Get rule-based 6-step workflow progress, counts breakdown, `next_action`, `warnings`, and scheduler timing.
+* `GET /api/hr/jobs/{job_id}/delete-preview`: Returns preview counts for candidates, resume files, interviews, proctor events, reports, emails, and agent runs.
+* `DELETE /api/hr/jobs/{job_id}`: Permanently deletes job. Requires body `{ "confirm_title": exact_job_title }`. Sets `status='deleting'`, deletes storage resume files with retry, cascades database rows, purges candidate audit rows, and writes a single count-only tombstone (`action='job_deleted'`).
+* `POST /api/hr/jobs/{job_id}/run-scheduler`: Manually trigger the Scheduling Agent pipeline immediately.
 
 ---
 
 ### 4.2 Candidate Management & Ranking
-* `GET /api/hr/jobs/{job_id}/candidates`: Get ranked candidate list for a specific job.
-* `GET /api/hr/candidates/{candidate_id}`: Full candidate dossier (resume, feedback, transcript, proctoring log, supervisor report, audit trail).
+* `GET /api/hr/jobs/{job_id}/candidates`: Get ranked candidate list for a specific job including `stage: { step: 1..6, label: str, detail: str }`.
+* `GET /api/hr/candidates/{candidate_id}`: Full candidate dossier (resume, feedback, transcript, proctoring log, supervisor report, audit trail, and `stage: { step: 1..6, label: str, detail: str }`).
 
 ---
 
 ### 4.3 HR Full-Control & Override Endpoints
 
+All override endpoints require `reason_category` (one of `'prior_experience_not_in_resume'`, `'interview_interrupted_tech_issue'`, `'disagrees_with_ai_scoring'`, `'diversity_equity_inclusion'`, `'reference_check_input'`, `'portfolio_review'`, `'other'`) and `reason` (10 to 500 characters, plain text). Every override records an entry in `hr_override_events` and writes `audit_log`.
+
 #### Override Candidate Status
-* `POST /api/hr/candidates/{candidate_id}/override-status`
+* `PATCH /api/hr/candidates/{candidate_id}/status` (or `POST /api/hr/candidates/{candidate_id}/override-status`)
 * Request Body:
 ```json
 {
   "status": "shortlisted",
-  "reason": "Candidate has specialized domain knowledge in LangChain not initially captured by parser."
+  "reason": "Candidate has specialized domain knowledge in LangChain not initially captured by parser.",
+  "reason_category": "prior_experience_not_in_resume"
 }
 ```
-* Response: `{ "success": true, "candidate_id": "...", "status": "shortlisted" }`
 
 #### Override Candidate Score
-* `POST /api/hr/candidates/{candidate_id}/override-score`
+* `PATCH /api/hr/candidates/{candidate_id}/score` (or `POST /api/hr/candidates/{candidate_id}/override-score`)
 * Request Body:
 ```json
 {
-  "manual_score": 88.5,
-  "reason": "Recruiter manual review of GitHub portfolio confirmed advanced distributed systems expertise."
+  "score": 88,
+  "reason": "Recruiter manual review of GitHub portfolio confirmed advanced distributed systems expertise.",
+  "reason_category": "portfolio_review"
 }
 ```
 
 #### Manual Interview Invitation / Resend
 * `POST /api/hr/candidates/{candidate_id}/invite`
-* Request Body: `{ "send_email": true }`
-* Generates fresh interview token and dispatches email via Resend.
+* Request Body: `{ "send_email": true, "reason": "...", "reason_category": "other" }`
+* If candidate score < job minimum score, `reason` (10-500 chars) and `reason_category` are mandatory, recording a `manual_invite_below_min` override.
 
 #### Cancel Active Interview Invitation
 * `POST /api/hr/candidates/{candidate_id}/cancel-invite`
-* Request Body: `{ "reason": "Candidate requested withdrawal from pipeline." }`
+* Request Body: `{ "reason": "Candidate requested withdrawal from pipeline.", "reason_category": "other" }`
 
 #### Allow Interview Retry
 * `POST /api/hr/candidates/{candidate_id}/allow-retry`
-* Request Body: `{ "reason": "Candidate experienced power outage during initial session." }`
-
-#### Regenerate Evaluation Supervisor Report
-* `POST /api/hr/candidates/{candidate_id}/regenerate-report`
-* Triggers Gemini Supervisor Agent to re-evaluate transcript with updated context.
+* Request Body: `{ "reason": "Candidate experienced power outage during initial session.", "reason_category": "interview_interrupted_tech_issue" }`
 
 #### Final Hiring Decision
 * `POST /api/hr/candidates/{candidate_id}/decision`
 * Request Body:
 ```json
 {
-  "decision": "Hire",
+  "decision": "hired",
   "send_email": true,
-  "notes": "Strong unanimous recommendation."
+  "reason": "Strong performance across technical and communication criteria.",
+  "reason_category": "other"
 }
 ```
+* Note: If decision matches AI evaluation recommendation, it is treated as a normal decision. If decision differs from AI recommendation or changes an earlier decision, it is an override and enforces `reason_category` and a 10–500 char `reason`.
 
-#### Email Preview
-* `GET /api/hr/candidates/{candidate_id}/email-preview?template=interview_invite`
-* Returns rendered HTML/text preview of the email template before sending.
+---
 
-#### Audit Trail & Agent Runs
-* `GET /api/hr/audit-logs?entity_id={candidate_id}`
-* `GET /api/hr/agent-runs?job_id={job_id}`
+### 4.4 HR Overrides & Admin Questions
+* `GET /api/hr/overrides`: List all overrides created by current HR user, including Admin status pills (`pending`, `reviewed`, `question_asked`, `answered`), questions asked by Admin, and `unanswered_questions_count`.
+* `POST /api/hr/overrides/{override_id}/questions/{question_id}/answer`: Submit response to Admin inquiry (1-1000 characters). Updates `hr_override_questions`, transitions `admin_status = 'answered'`, and logs audit trail.
+
+---
+
+## 5. Admin Supervision Endpoints (Authenticated: Admin Role)
+
+All admin endpoints require `Authorization: Bearer <supabase_jwt>` where the user's role in `public.user_roles` is `'admin'`. If `must_change_password = true`, all routes except `/me` and `/admin/change-password` return HTTP 403 Forbidden.
+
+### 5.1 Identity & Password Management
+* `GET /api/me` (or `GET /me`): Returns identity `{ id, email, role, must_change_password, hr_profile }`.
+* `POST /api/admin/change-password`: Verifies current password with Supabase auth sign-in, enforces $\ge 12$ chars, different from current and email, updates password via Supabase Admin API, sets `must_change_password = false`, and logs `admin_audit_log`. Rate limited to 5/hour with lockout.
+
+### 5.2 Platform Supervision & Data Views
+* `GET /api/admin/overview`: Platform metrics (HR users, jobs active/closed, candidates, completed interviews, decisions, overrides this week, pending requests, emails sent today) and 14-day daily trends for applications and jobs.
+* `GET /api/admin/hr-users`: List HR users with jobs count, candidates count, override rate, reply-to email and enabled flag, and last active timestamp. Sortable by `jobs`, `candidates`, `override_rate`, `last_active`.
+* `GET /api/admin/hr-users/{id}`: Detailed HR account view and table of jobs created. Data Protection: Strictly excludes candidate names, resumes, scores, transcripts, and rubrics.
+* `GET /api/admin/candidates/{email_key}`: Candidate platform history across all jobs, stages reached, completed interview counts, candidate portal last sign-in, and blocked status. Data Protection: Strictly excludes resume text, scores, question transcripts, and proctoring details.
+* `GET /api/admin/overrides`: Paginated list of all HR overrides with filters (`hr_user_id`, `job_id`, `override_type`, `admin_status`), search, and rule-based "Worth a look" advisory flag ($\ge 5$ decisions and $> 30\%$ overrides, or same candidate overridden $> 2$ times).
+* `POST /api/admin/overrides/{id}/review`: Mark override as reviewed with optional admin note ($\le 300$ chars).
+* `POST /api/admin/overrides/{id}/question`: Ask HR user a question about an override (5-500 chars). Sets `admin_status = 'question_asked'`, records question, and notifies HR user via email.

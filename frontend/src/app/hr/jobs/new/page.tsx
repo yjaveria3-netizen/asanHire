@@ -20,13 +20,39 @@ export default function NewJobPage() {
   const [requirements, setRequirements] = useState("");
   const [topN, setTopN] = useState("5");
   const [minScore, setMinScore] = useState("65.0");
-  const [deadline, setDeadline] = useState(
-    new Date(Date.now() + 5 * 24 * 3600 * 1000).toISOString().split("T")[0]
-  );
+  // Default to 3 days ahead at 18:00 local time
+  const [deadline, setDeadline] = useState(() => {
+    const d = new Date(Date.now() + 3 * 24 * 3600 * 1000);
+    d.setHours(18, 0, 0, 0);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  });
+  const [formError, setFormError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const userTimezone = React.useMemo(() => {
+    try {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone;
+    } catch {
+      return "Local Time";
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
+
+    const deadlineDate = new Date(deadline);
+    if (isNaN(deadlineDate.getTime())) {
+      setFormError("Please enter a valid deadline date and time.");
+      return;
+    }
+
+    if (deadlineDate.getTime() <= Date.now() + 60 * 1000) {
+      setFormError("Deadline must be at least 1 minute in the future.");
+      return;
+    }
+
     setLoading(true);
 
     const payload = {
@@ -36,14 +62,14 @@ export default function NewJobPage() {
       requirements,
       top_n: parseInt(topN, 10),
       min_score: parseFloat(minScore),
-      deadline: new Date(deadline).toISOString(),
+      deadline: deadlineDate.toISOString(), // Strictly ISO 8601 with Z
     };
 
     try {
       const created = await api.createHRJob(payload);
       router.push(`/hr/jobs/${created.id}`);
-    } catch {
-      router.push("/hr/jobs");
+    } catch (err: any) {
+      setFormError(err.message || "Failed to create job requisition.");
     } finally {
       setLoading(false);
     }
@@ -138,20 +164,26 @@ export default function NewJobPage() {
               required
             />
             <NeuInput
-              label="Application Deadline"
-              type="date"
+              label="Applications close at"
+              type="datetime-local"
               value={deadline}
               onChange={(e) => setDeadline(e.target.value)}
-              helperText="When auto-scheduling triggers"
+              helperText={`Timezone: ${userTimezone}. Pipeline starts automatically at this exact moment.`}
               required
             />
           </div>
 
+          {formError && (
+            <div className="p-3 rounded-lg bg-[rgba(90,42,42,0.3)] border border-[#9E4A4A]/40 text-xs text-[#E57373]">
+              {formError}
+            </div>
+          )}
+
           <div className="p-4 rounded-xl bg-[#242724] border border-[#DD700B]/20 flex items-center gap-3">
             <Sparkles className="w-5 h-5 text-[#DD700B] shrink-0" />
             <div className="text-xs text-[#8A8B82]">
-              <strong className="text-[#D9DADF]">Rubric Agent Preview:</strong> Upon submission, Gemini 1.5 will
-              analyze your specifications and generate 3–5 weighted evaluation dimensions summing to 100%.
+              <strong className="text-[#D9DADF]">Rubric Agent Preview:</strong> Upon submission, Gemini 2.5 will
+              analyze your specifications and generate 4–7 weighted evaluation dimensions summing to 100%.
             </div>
           </div>
 

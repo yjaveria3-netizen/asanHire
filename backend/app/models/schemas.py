@@ -1,6 +1,6 @@
 import re
 from typing import List, Dict, Any, Optional
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from pydantic import BaseModel, Field, field_validator
 
 _CTRL_SINGLE_LINE_RE = re.compile(r"[\x00-\x1f\x7f-\x9f]")
@@ -350,6 +350,7 @@ class JobCreateRequest(BaseModel):
     deadline: datetime
     top_n: int = Field(5, ge=1, le=100)
     min_score: int = Field(60, ge=0, le=100)
+    department: Optional[str] = None
     auto_invite: bool = True
 
     @field_validator("title", mode="before")
@@ -411,14 +412,33 @@ class JobCreateRequest(BaseModel):
             raise ValueError("invalid experience_level")
         return s
 
-    @field_validator("deadline")
+    @field_validator("deadline", mode="before")
     @classmethod
-    def validate_deadline_future(cls, v: datetime) -> datetime:
+    def validate_deadline_future(cls, v: Any) -> datetime:
+        import re
+        if isinstance(v, str):
+            s = v.strip()
+            has_tz = s.endswith("Z") or s.endswith("z") or re.search(r"[+-]\d{2}:?\d{2}$", s) is not None
+            if not has_tz:
+                raise ValueError("Deadline must include a timezone offset or 'Z' (e.g., 2026-10-21T18:00:00Z)")
+            if s.endswith("Z") or s.endswith("z"):
+                s = s[:-1] + "+00:00"
+            try:
+                dt = datetime.fromisoformat(s)
+            except Exception:
+                raise ValueError("Invalid ISO 8601 format for deadline")
+        elif isinstance(v, datetime):
+            if v.tzinfo is None:
+                raise ValueError("Deadline must include a timezone offset or 'Z' (e.g., 2026-10-21T18:00:00Z)")
+            dt = v
+        else:
+            raise ValueError("Deadline must be an ISO 8601 string with a timezone offset or 'Z'")
+
         now = datetime.now(timezone.utc)
-        dt = v if v.tzinfo is not None else v.replace(tzinfo=timezone.utc)
-        if dt <= now:
-            raise ValueError("deadline must be in the future")
-        return dt
+        dt_utc = dt.astimezone(timezone.utc)
+        if dt_utc < now + timedelta(seconds=60):
+            raise ValueError("Deadline must be at least 1 minute in the future")
+        return dt_utc
 
     @field_validator("min_score", mode="before")
     @classmethod
@@ -427,6 +447,45 @@ class JobCreateRequest(BaseModel):
         if val < 0 or val > 100:
             raise ValueError("min_score must be between 0 and 100")
         return val
+
+
+class JobUpdateRequest(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    skills: Optional[List[str]] = None
+    experience_level: Optional[str] = None
+    top_n: Optional[int] = None
+    min_score: Optional[int] = None
+    auto_invite: Optional[bool] = None
+    deadline: Optional[Any] = None
+    status: Optional[str] = None
+    department: Optional[str] = None
+
+    @field_validator("deadline", mode="before")
+    @classmethod
+    def validate_deadline_tz(cls, v: Any) -> Optional[datetime]:
+        if v is None:
+            return None
+        import re
+        if isinstance(v, str):
+            s = v.strip()
+            has_tz = s.endswith("Z") or s.endswith("z") or re.search(r"[+-]\d{2}:?\d{2}$", s) is not None
+            if not has_tz:
+                raise ValueError("Deadline must include a timezone offset or 'Z' (e.g., 2026-10-21T18:00:00Z)")
+            if s.endswith("Z") or s.endswith("z"):
+                s = s[:-1] + "+00:00"
+            try:
+                dt = datetime.fromisoformat(s)
+            except Exception:
+                raise ValueError("Invalid ISO 8601 format for deadline")
+        elif isinstance(v, datetime):
+            if v.tzinfo is None:
+                raise ValueError("Deadline must include a timezone offset or 'Z' (e.g., 2026-10-21T18:00:00Z)")
+            dt = v
+        else:
+            raise ValueError("Deadline must be an ISO 8601 string with a timezone offset or 'Z'")
+
+        return dt.astimezone(timezone.utc)
 
 
 class JobDetailResponse(BaseModel):
@@ -446,6 +505,16 @@ class JobDetailResponse(BaseModel):
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     message: Optional[str] = None
+    deadline_at: Optional[str] = None
+    server_time: Optional[str] = None
+    seconds_until_deadline: Optional[int] = None
+    scheduler_state: Optional[str] = None
+
+
+class CandidateStage(BaseModel):
+    step: int
+    label: str
+    detail: str
 
 
 class CandidateSummaryResponse(BaseModel):
@@ -460,6 +529,7 @@ class CandidateSummaryResponse(BaseModel):
     strengths: List[str] = Field(default_factory=list)
     gaps: List[str] = Field(default_factory=list)
     created_at: Optional[datetime] = None
+    stage: Optional[CandidateStage] = None
 
 
 class CandidateDetailResponse(BaseModel):
@@ -485,6 +555,52 @@ class CandidateDetailResponse(BaseModel):
     evaluation_report: Optional[Dict[str, Any]] = None
     proctoring_events: List[Dict[str, Any]] = Field(default_factory=list)
     audit_logs: List[Dict[str, Any]] = Field(default_factory=list)
+    stage: Optional[CandidateStage] = None
+
+
+class ProgressStepItem(BaseModel):
+    step: int
+    name: str
+    state: str  # "done" | "current" | "upcoming" | "attention"
+    summary: str
+    counts: Dict[str, Any] = Field(default_factory=dict)
+
+
+class ProgressNextAction(BaseModel):
+    label: str
+    hint: str
+    type: str  # "info" | "action" | "warning"
+
+
+class JobProgressResponse(BaseModel):
+    current_step: int  # 1..6
+    steps: List[ProgressStepItem]
+    next_action: Optional[ProgressNextAction] = None
+    warnings: List[str] = Field(default_factory=list)
+    deadline_at: Optional[str] = None
+    server_time: Optional[str] = None
+    seconds_until_deadline: Optional[int] = None
+    scheduler_ran_at: Optional[str] = None
+    scheduler_state: Optional[str] = None
+
+
+class DeletePreviewResponse(BaseModel):
+    candidates: int = 0
+    resume_files: int = 0
+    interviews: int = 0
+    proctor_events: int = 0
+    reports: int = 0
+    email_logs: int = 0
+    agent_runs: int = 0
+
+
+class JobDeleteRequest(BaseModel):
+    confirm_title: str
+
+
+class JobDeleteResponse(BaseModel):
+    deleted: bool = True
+    counts: Dict[str, int] = Field(default_factory=dict)
 
 
 _VALID_CANDIDATE_STATUSES = {
@@ -508,18 +624,41 @@ _DECISION_MAP = {
 }
 
 
+VALID_REASON_CATEGORIES = {
+    # Part G standard categories
+    "candidate_request",
+    "recruiter_discretion",
+    "technical_issue",
+    "interview_interrupted",
+    "new_information",
+    "compliance_requirement",
+    "other",
+    # Legacy categories preserved for backwards compatibility
+    "prior_experience_not_in_resume",
+    "interview_interrupted_tech_issue",
+    "disagrees_with_ai_scoring",
+    "diversity_equity_inclusion",
+    "reference_check_input",
+    "portfolio_review",
+}
+
+
 class StatusOverrideRequest(BaseModel):
     status: str
     reason: str
+    reason_category: Optional[str] = "other"
 
-    def get_validated(self) -> tuple[str, str]:
+    def get_validated(self) -> tuple[str, str, str]:
         s = (self.status or "").strip().lower()
         if s not in _VALID_CANDIDATE_STATUSES:
             raise ValueError("Invalid candidate status")
+        cat = (self.reason_category or "other").strip()
+        if cat not in VALID_REASON_CATEGORIES:
+            raise ValueError(f"Invalid reason_category: {cat}")
         r = (self.reason or "").strip()
-        if not r or len(r) > 500 or _CTRL_SINGLE_LINE_RE.search(r):
-            raise ValueError("reason is required (1-500 chars)")
-        return s, r
+        if not r or len(r) < 10 or len(r) > 500 or _CTRL_SINGLE_LINE_RE.search(r):
+            raise ValueError("reason is required (10-500 chars)")
+        return s, r, cat
 
 
 class ScoreOverrideRequest(BaseModel):
@@ -528,8 +667,9 @@ class ScoreOverrideRequest(BaseModel):
     manual_score: Optional[float] = None
     note: Optional[str] = None
     reason: Optional[str] = None
+    reason_category: Optional[str] = "other"
 
-    def get_validated(self) -> tuple[int, str]:
+    def get_validated(self) -> tuple[int, str, str]:
         raw_score = (
             self.score
             if self.score is not None
@@ -541,43 +681,80 @@ class ScoreOverrideRequest(BaseModel):
         if val < 0 or val > 100:
             raise ValueError("score must be between 0 and 100")
 
+        cat = (self.reason_category or "other").strip()
+        if cat not in VALID_REASON_CATEGORIES:
+            raise ValueError(f"Invalid reason_category: {cat}")
+
         raw_note = self.note if self.note is not None else self.reason
         clean_note = (raw_note or "").strip()
-        if not clean_note or len(clean_note) > 500 or _CTRL_SINGLE_LINE_RE.search(clean_note):
-            raise ValueError("note/reason is required (1-500 chars)")
-        return val, clean_note
+        if not clean_note or len(clean_note) < 10 or len(clean_note) > 500 or _CTRL_SINGLE_LINE_RE.search(clean_note):
+            raise ValueError("note/reason is required (10-500 chars)")
+        return val, clean_note, cat
 
 
 class DecisionRequest(BaseModel):
     decision: str
     reason: Optional[str] = None
     notes: Optional[str] = None
+    reason_category: Optional[str] = None
     send_email: bool = False
 
-    def get_validated(self) -> tuple[str, str, bool]:
+    def get_validated(self, is_override: bool = False) -> tuple[str, str, Optional[str], bool]:
         raw_dec = (self.decision or "").strip().lower()
         if raw_dec not in _DECISION_MAP:
             raise ValueError("decision must be hired, rejected, or on_hold")
         target_status = _DECISION_MAP[raw_dec]
 
+        cat = (self.reason_category or ("other" if is_override else "")).strip()
+        if is_override and cat and cat not in VALID_REASON_CATEGORIES:
+            raise ValueError(f"Invalid reason_category: {cat}")
+
         raw_reason = self.reason if self.reason is not None else self.notes
         clean_reason = (raw_reason or "").strip()
-        if not clean_reason or len(clean_reason) > 500 or _CTRL_SINGLE_LINE_RE.search(clean_reason):
-            raise ValueError("reason is required (1-500 chars)")
-        return target_status, clean_reason, bool(self.send_email)
+        if is_override:
+            if not clean_reason or len(clean_reason) < 10 or len(clean_reason) > 500 or _CTRL_SINGLE_LINE_RE.search(clean_reason):
+                raise ValueError("reason is required for override (10-500 chars)")
+        else:
+            if clean_reason and (len(clean_reason) > 500 or _CTRL_SINGLE_LINE_RE.search(clean_reason)):
+                raise ValueError("reason exceeds allowed length")
+            if not clean_reason:
+                clean_reason = f"Decision submitted: {target_status}"
+
+        return target_status, clean_reason, (cat or "other" if is_override else None), bool(self.send_email)
 
 
 class InviteRequest(BaseModel):
     send_email: bool = True
     reason: Optional[str] = "Manual invite by HR"
+    reason_category: Optional[str] = "other"
 
 
 class CancelInviteRequest(BaseModel):
-    reason: Optional[str] = "Invite cancelled by HR"
+    reason: str = "Invite cancelled by HR"
+    reason_category: Optional[str] = "other"
+
+    def get_validated(self) -> tuple[str, str]:
+        cat = (self.reason_category or "other").strip()
+        if cat not in VALID_REASON_CATEGORIES:
+            raise ValueError(f"Invalid reason_category: {cat}")
+        r = (self.reason or "").strip()
+        if not r or len(r) < 10 or len(r) > 500 or _CTRL_SINGLE_LINE_RE.search(r):
+            raise ValueError("reason is required (10-500 chars)")
+        return r, cat
 
 
 class AllowRetryRequest(BaseModel):
-    reason: Optional[str] = "Interview retry allowed by HR"
+    reason: str = "Interview retry allowed by HR"
+    reason_category: Optional[str] = "other"
+
+    def get_validated(self) -> tuple[str, str]:
+        cat = (self.reason_category or "other").strip()
+        if cat not in VALID_REASON_CATEGORIES:
+            raise ValueError(f"Invalid reason_category: {cat}")
+        r = (self.reason or "").strip()
+        if not r or len(r) < 10 or len(r) > 500 or _CTRL_SINGLE_LINE_RE.search(r):
+            raise ValueError("reason is required (10-500 chars)")
+        return r, cat
 
 
 class EmailPreviewResponse(BaseModel):
@@ -611,3 +788,143 @@ class AgentRunResponse(BaseModel):
     status: str
     latency_ms: Optional[int] = None
     created_at: datetime
+
+
+# ============================================================================
+# Part G: Admin & Override Accountability Schemas
+# ============================================================================
+
+class AdminChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+
+class AdminOverviewResponse(BaseModel):
+    hr_users_count: int
+    jobs_active_count: int
+    jobs_closed_count: int
+    candidates_count: int
+    interviews_completed_count: int
+    decisions_hired_count: int
+    decisions_rejected_count: int
+    decisions_on_hold_count: int
+    overrides_this_week_count: int
+    pending_hr_access_requests_count: int
+    emails_sent_today_count: int
+    trends_applications_14d: List[Dict[str, Any]]
+    trends_jobs_14d: List[Dict[str, Any]]
+
+
+class AdminHRUserItem(BaseModel):
+    id: str
+    email: str
+    full_name: str
+    organization: str
+    contact_email: str
+    reply_to_enabled: bool
+    status: str
+    jobs_count: int
+    candidates_count: int
+    override_rate: float
+    created_at: Optional[datetime] = None
+    last_active_at: Optional[datetime] = None
+
+
+class AdminHRUserDetailResponse(BaseModel):
+    id: str
+    email: str
+    full_name: str
+    organization: str
+    job_title: str
+    contact_email: str
+    reply_to_enabled: bool
+    status: str
+    jobs_count: int
+    candidates_count: int
+    override_rate: float
+    created_at: Optional[datetime] = None
+    last_active_at: Optional[datetime] = None
+    jobs: List[Dict[str, Any]] = Field(default_factory=list)
+
+
+class AdminCandidateSummaryResponse(BaseModel):
+    email_key: str
+    applications_count: int
+    interviews_completed_count: int
+    portal_last_sign_in: Optional[datetime] = None
+    is_blocked: bool = False
+    applications: List[Dict[str, Any]] = Field(default_factory=list)
+
+
+class OverrideQuestionItem(BaseModel):
+    id: str
+    override_id: str
+    admin_id: str
+    question: str
+    answer: Optional[str] = None
+    asked_at: Optional[datetime] = None
+    answered_at: Optional[datetime] = None
+
+
+class HROverrideItem(BaseModel):
+    id: str
+    job_id: str
+    job_title: str
+    candidate_id: Optional[str] = None
+    candidate_name: str
+    override_type: str
+    from_value: str
+    to_value: str
+    reason_category: str
+    reason: str
+    admin_status: str  # 'pending' | 'reviewed' | 'question_asked' | 'answered'
+    admin_note: Optional[str] = None
+    created_at: Optional[datetime] = None
+    questions: List[OverrideQuestionItem] = Field(default_factory=list)
+
+
+class HROverridesListResponse(BaseModel):
+    overrides: List[HROverrideItem]
+    unanswered_questions_count: int = 0
+
+
+class AdminOverrideItem(BaseModel):
+    id: str
+    hr_user_id: str
+    hr_organization: str
+    hr_email: Optional[str] = None
+    job_id: str
+    job_title: str
+    candidate_id: Optional[str] = None
+    candidate_name: str
+    override_type: str
+    from_value: str
+    to_value: str
+    reason_category: str
+    reason: str
+    admin_status: str
+    admin_note: Optional[str] = None
+    created_at: Optional[datetime] = None
+    worth_a_look: bool = False
+    worth_a_look_reason: Optional[str] = None
+    questions: List[OverrideQuestionItem] = Field(default_factory=list)
+
+
+class AdminOverridesListResponse(BaseModel):
+    total: int
+    page: int
+    limit: int
+    overrides: List[AdminOverrideItem]
+
+
+class AdminOverrideReviewRequest(BaseModel):
+    admin_note: Optional[str] = Field(None, max_length=300)
+
+
+class AdminOverrideQuestionRequest(BaseModel):
+    question: str = Field(..., min_length=5, max_length=500)
+
+
+class HROverrideAnswerRequest(BaseModel):
+    answer: str = Field(..., min_length=1, max_length=1000)
+
