@@ -9,6 +9,7 @@ import { Job, Candidate } from "@/lib/types";
 import { NeuCard } from "@/components/neu/NeuCard";
 import { NeuButton } from "@/components/neu/NeuButton";
 import { NeuBadge } from "@/components/neu/NeuBadge";
+import { AnimatedCounter } from "@/components/neu/AnimatedCounter";
 import { Logo } from "@/components/brand/Logo";
 import {
   Briefcase,
@@ -132,7 +133,7 @@ export default function HRDashboardPage() {
           </div>
           <div className="mt-4">
             <div className="text-3xl font-bold text-[#D9DADF]">
-              {loading ? "..." : jobs.length}
+              {loading ? "..." : <AnimatedCounter value={jobs.length} />}
             </div>
             {/* Linear Progress Meter (0 to End) */}
             <div className="mt-2.5 flex flex-col gap-1">
@@ -161,7 +162,9 @@ export default function HRDashboardPage() {
             </div>
           </div>
           <div className="mt-4">
-            <div className="text-3xl font-bold text-[#D9DADF]">42</div>
+            <div className="text-3xl font-bold text-[#D9DADF]">
+              <AnimatedCounter value={42} />
+            </div>
             {/* Linear Progress Meter (0 to End) */}
             <div className="mt-2.5 flex flex-col gap-1">
               <div className="w-full h-1.5 bg-[#202320] rounded-full overflow-hidden border border-[#383A38]">
@@ -189,7 +192,9 @@ export default function HRDashboardPage() {
             </div>
           </div>
           <div className="mt-4">
-            <div className="text-3xl font-bold text-[#FCF8D8]">84.6%</div>
+            <div className="text-3xl font-bold text-[#FCF8D8]">
+              <AnimatedCounter value={84.6} decimals={1} suffix="%" />
+            </div>
             {/* Linear Progress Meter (0 to End) */}
             <div className="mt-2.5 flex flex-col gap-1">
               <div className="w-full h-1.5 bg-[#202320] rounded-full overflow-hidden border border-[#383A38]">
@@ -217,7 +222,9 @@ export default function HRDashboardPage() {
             </div>
           </div>
           <div className="mt-4">
-            <div className="text-3xl font-bold text-[#8FD19E]">96.8%</div>
+            <div className="text-3xl font-bold text-[#8FD19E]">
+              <AnimatedCounter value={96.8} decimals={1} suffix="%" />
+            </div>
             {/* Linear Progress Meter (0 to End) */}
             <div className="mt-2.5 flex flex-col gap-1">
               <div className="w-full h-1.5 bg-[#202320] rounded-full overflow-hidden border border-[#383A38]">

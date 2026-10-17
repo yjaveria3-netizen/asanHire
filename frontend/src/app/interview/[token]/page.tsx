@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { TranscriptMessage } from "@/lib/types";
@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 
 export default function InterviewRoomPage() {
+  const router = useRouter();
   const params = useParams();
   const token = (params?.token as string) || "demo-token";
 
@@ -450,6 +451,7 @@ export default function InterviewRoomPage() {
           candidateName={candidateName}
           jobTitle={jobTitle}
           onEnterFullscreen={handleStartInterview}
+          onClose={() => router.push("/")}
         />
       )}
 
