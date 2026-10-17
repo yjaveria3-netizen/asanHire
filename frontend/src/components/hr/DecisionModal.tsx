@@ -4,8 +4,9 @@ import React, { useState, useEffect } from "react";
 import { NeuModal } from "@/components/neu/NeuModal";
 import { NeuButton } from "@/components/neu/NeuButton";
 import { NeuToggle } from "@/components/neu/NeuToggle";
-import { CheckCircle2, XCircle, PauseCircle, Mail, Eye, AlertCircle } from "lucide-react";
+import { CheckCircle2, XCircle, PauseCircle, Mail, Eye, AlertCircle, ShieldAlert } from "lucide-react";
 import { api } from "@/lib/api";
+import { OVERRIDE_REASON_CATEGORIES, OverrideReasonCategory } from "@/lib/constants";
 
 interface DecisionModalProps {
   isOpen: boolean;
@@ -13,8 +14,14 @@ interface DecisionModalProps {
   candidateId?: string;
   candidateName: string;
   currentStatus?: string;
+  aiRecommendation?: string;
   initialDecision?: "Hire" | "Reject" | "Hold";
-  onConfirm: (decision: "Hire" | "Reject" | "Hold", sendEmail: boolean, notes: string) => Promise<void>;
+  onConfirm: (
+    decision: "Hire" | "Reject" | "Hold",
+    sendEmail: boolean,
+    notes: string,
+    reasonCategory?: string
+  ) => Promise<void>;
 }
 
 export const DecisionModal: React.FC<DecisionModalProps> = ({
@@ -23,15 +30,38 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
   candidateId,
   candidateName,
   currentStatus,
+  aiRecommendation,
   initialDecision = "Hire",
   onConfirm,
 }) => {
   const [selectedDecision, setSelectedDecision] = useState<"Hire" | "Reject" | "Hold">(initialDecision);
   const [sendEmail, setSendEmail] = useState<boolean>(true);
   const [notes, setNotes] = useState<string>("");
+  const [reasonCategory, setReasonCategory] = useState<OverrideReasonCategory>("recruiter_discretion");
   const [loading, setLoading] = useState<boolean>(false);
   const [emailPreview, setEmailPreview] = useState<{ subject: string; html: string } | null>(null);
   const [loadingPreview, setLoadingPreview] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (initialDecision) {
+      setSelectedDecision(initialDecision);
+    }
+  }, [initialDecision, isOpen]);
+
+  // Is this decision considered an override?
+  // 1. Changing an already decided status (hired/rejected/on_hold)
+  // 2. Or differing from the AI recommendation
+  const hasPriorDecision =
+    currentStatus && ["hired", "rejected", "on_hold"].includes(currentStatus);
+  const differsFromAI =
+    aiRecommendation &&
+    selectedDecision.toLowerCase() !== aiRecommendation.toLowerCase();
+  const isOverride = Boolean(hasPriorDecision || differsFromAI);
+
+  const notesTrimmed = notes.trim();
+  const isReasonTooShort = isOverride && notesTrimmed.length < 10;
+  const isReasonTooLong = notesTrimmed.length > 500;
+  const canSubmit = !loading && notesTrimmed.length > 0 && (!isOverride || (!isReasonTooShort && !isReasonTooLong));
 
   useEffect(() => {
     if (initialDecision) {
@@ -72,9 +102,9 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
   }, [isOpen, selectedDecision, candidateId]);
 
   const handleSubmit = async () => {
-    if (!notes.trim()) return;
+    if (!canSubmit) return;
     setLoading(true);
-    await onConfirm(selectedDecision, sendEmail, notes);
+    await onConfirm(selectedDecision, sendEmail, notes.trim(), isOverride ? reasonCategory : undefined);
     setLoading(false);
     onClose();
   };
@@ -135,30 +165,84 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
           </button>
         </div>
 
-        {isChangingDecision && (
-          <div className="p-3 rounded-xl bg-[rgba(221,112,11,0.15)] border border-[#DD700B]/30 flex items-start gap-2.5 text-xs text-[#DD700B]">
-            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-            <span>
-              <strong>Decision Adjustment:</strong> Transitioning from <code>{currentStatus}</code> to{" "}
-              <code>{selectedDecision.toLowerCase()}</code> will send a corrected decision email if notifications are enabled.
-            </span>
+        {/* Override Notification Notice */}
+        {isOverride && (
+          <div className="p-3.5 rounded-xl bg-[rgba(221,112,11,0.12)] border border-[#DD700B]/40 flex flex-col gap-2 text-xs text-[#DD700B]">
+            <div className="flex items-center gap-2 font-semibold">
+              <ShieldAlert className="w-4 h-4 shrink-0" />
+              <span>Override Accountability Notice</span>
+            </div>
+            <p className="text-xs text-[#D9DADF]">
+              {differsFromAI && !isChangingDecision
+                ? `You are overriding the AI recommendation (${aiRecommendation?.toUpperCase() || "N/A"} → ${selectedDecision.toUpperCase()}). A category and min 10-char justification are mandatory.`
+                : `You are modifying an existing decision (${currentStatus?.toUpperCase()} → ${selectedDecision.toUpperCase()}). This adjustment is recorded as an HR override.`}
+            </p>
+          </div>
+        )}
+
+        {/* Reason Category (if Override) */}
+        {isOverride && (
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold text-[#D9DADF] uppercase tracking-wider">
+              Override Reason Category <span className="text-[#DD700B]">*</span>
+            </label>
+            <select
+              value={reasonCategory}
+              onChange={(e) => setReasonCategory(e.target.value as OverrideReasonCategory)}
+              className="w-full neu-inset text-xs font-medium text-[#D9DADF] bg-[#232623] px-3 py-2.5 rounded-xl border border-[#8A8B82]/20 focus:outline-none focus:ring-2 focus:ring-[#DD700B] cursor-pointer"
+            >
+              {OVERRIDE_REASON_CATEGORIES.map((cat) => (
+                <option key={cat.value} value={cat.value} className="bg-[#1E201E] text-[#D9DADF]">
+                  {cat.label}
+                </option>
+              ))}
+            </select>
           </div>
         )}
 
         {/* Required Notes / Reason */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold text-[#D9DADF] uppercase tracking-wider flex items-center justify-between">
-            <span>Mandatory Decision Reason</span>
-            <span className="text-[10px] text-[#DD700B] font-mono">* Required</span>
-          </label>
+          <div className="flex items-center justify-between text-xs">
+            <label className="font-semibold text-[#D9DADF] uppercase tracking-wider">
+              {isOverride ? "Override Justification" : "Decision Rationale"} <span className="text-[#DD700B]">*</span>
+            </label>
+            {isOverride && (
+              <span
+                className={`font-mono text-[11px] ${
+                  isReasonTooShort
+                    ? "text-[#8A8B82]"
+                    : isReasonTooLong
+                    ? "text-[#E57373] font-bold"
+                    : "text-[#8FD19E]"
+                }`}
+              >
+                {notesTrimmed.length} / 500 chars (min 10)
+              </span>
+            )}
+          </div>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="Document detailed rationale for this hiring decision (mandatory for audit compliance)..."
+            placeholder={
+              isOverride
+                ? "Document explicit justification for why this override was chosen (10 to 500 chars)..."
+                : "Document detailed rationale for this hiring decision (mandatory for audit compliance)..."
+            }
             rows={3}
             required
-            className="neu-inset text-xs text-[#D9DADF] p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#DD700B] placeholder-[#8A8B82]/50 border border-[#8A8B82]/20"
+            className="neu-inset text-xs text-[#D9DADF] p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#DD700B] placeholder-[#8A8B82]/50 border border-[#8A8B82]/20 resize-none"
+            maxLength={520}
           />
+          {isReasonTooShort && notesTrimmed.length > 0 && (
+            <p className="text-[11px] text-[#DD700B]">
+              Please write at least {10 - notesTrimmed.length} more character{10 - notesTrimmed.length === 1 ? "" : "s"}.
+            </p>
+          )}
+          {isReasonTooLong && (
+            <p className="text-[11px] text-[#E57373]">
+              Exceeded 500 character limit by {notesTrimmed.length - 500} characters.
+            </p>
+          )}
         </div>
 
         {/* Email Notification Toggle */}
@@ -206,12 +290,13 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
           <NeuButton
             variant="primary"
             onClick={handleSubmit}
-            disabled={loading || !notes.trim()}
+            disabled={!canSubmit}
           >
-            {loading ? "Recording Decision..." : `Confirm ${selectedDecision}`}
+            {loading ? "Recording..." : isOverride ? `Override and Confirm ${selectedDecision}` : `Confirm ${selectedDecision}`}
           </NeuButton>
         </div>
       </div>
     </NeuModal>
   );
 };
+

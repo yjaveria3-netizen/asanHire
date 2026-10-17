@@ -244,8 +244,9 @@ async def test_periodic_scheduler_finds_due_jobs_and_invites_top_n_with_tie_brea
     mcp_runs = [a for a in store["agent_runs"] if str(a["agent"]).startswith("mcp:")]
     assert len(sched_runs) == 2
     assert len(mcp_runs) >= 4  # get_job_rubric + get_ranked_candidates + 2x send_invite_email
-    assert len(store["audit_log"]) == 2
-    assert all(a["actor"] == "system:scheduling_agent" for a in store["audit_log"])
+    invite_audits = [a for a in store["audit_log"] if a["action"] == "candidate_invited"]
+    assert len(invite_audits) == 2
+    assert all(a["actor"] == "system:scheduling_agent" for a in invite_audits)
 
     # Re-running check_and_schedule_due_jobs must skip job-due since scheduler_ran_at is now set
     with patch("app.services.scheduler.get_supabase_service_client", return_value=fake_db):

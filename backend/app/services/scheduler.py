@@ -27,11 +27,12 @@ def _parse_deadline(value: Any) -> datetime:
 
 async def check_and_schedule_due_jobs() -> List[Dict[str, Any]]:
     """
-    Finds jobs where status='open', auto_invite=true, deadline < now() and
-    scheduler_ran_at is null, and runs schedule_job(job_id) for each.
+    Finds jobs where status='open', auto_invite=true, deadline <= now() and
+    scheduler_ran_at is null, claims each atomically, and runs schedule_job(job_id).
     """
     client = get_supabase_service_client()
     now_utc = datetime.now(timezone.utc)
+    now_iso = now_utc.isoformat()
 
     res = (
         client.table("jobs")
@@ -54,10 +55,23 @@ async def check_and_schedule_due_jobs() -> List[Dict[str, Any]]:
         except Exception:
             continue
 
-        if deadline_dt < now_utc:
+        if deadline_dt <= now_utc:
             job_id = str(job["id"])
+            # Atomic update claim so two workers or ticks never run the same job twice
+            claim_query = (
+                client.table("jobs")
+                .update({"scheduler_ran_at": now_iso})
+                .eq("id", job_id)
+            )
+            if hasattr(claim_query, "is_"):
+                claim_query = claim_query.is_("scheduler_ran_at", "null")
+            claim_res = claim_query.eq("status", "open").execute()
+            if not claim_res.data:
+                # Job was claimed concurrently by another worker
+                continue
+
             try:
-                out = await schedule_job(job_id)
+                out = await schedule_job(job_id, is_auto_run=True)
                 results.append(out)
             except Exception as e:
                 logger.error(f"Failed to run schedule_job for job {job_id}: {type(e).__name__}")
@@ -76,8 +90,21 @@ def check_job_deadlines_job() -> List[Dict[str, Any]]:
         return []
 
 
+def run_catchup_pass() -> None:
+    """Immediate catch-up pass on startup for deadlines that passed while offline."""
+    try:
+        check_job_deadlines_job()
+        logger.info("Scheduler startup catch-up pass completed.")
+    except Exception as e:
+        logger.warning(f"Scheduler startup catch-up pass encountered error: {e}")
+
+
 def start_scheduler() -> None:
-    """Initializes and starts the APScheduler BackgroundScheduler (every 60 seconds)."""
+    """Initializes, runs startup catch-up pass, and starts BackgroundScheduler (every 60s)."""
+    # 1. Run catch-up pass immediately on startup
+    run_catchup_pass()
+
+    # 2. Start recurring 60s ticker
     if not scheduler.running:
         scheduler.add_job(
             check_job_deadlines_job,

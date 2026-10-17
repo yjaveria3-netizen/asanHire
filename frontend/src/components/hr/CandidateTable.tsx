@@ -42,6 +42,7 @@ export const CandidateTable: React.FC<CandidateTableProps> = ({ candidates }) =>
               <th className="px-5 py-4 font-semibold">Rank</th>
               <th className="px-5 py-4 font-semibold">Candidate</th>
               <th className="px-5 py-4 font-semibold">Status</th>
+              <th className="px-5 py-4 font-semibold">Stage</th>
               <th className="px-5 py-4 font-semibold">Resume Score</th>
               <th className="px-5 py-4 font-semibold">Effective Score</th>
               <th className="px-5 py-4 font-semibold text-right">Actions</th>
@@ -51,14 +52,15 @@ export const CandidateTable: React.FC<CandidateTableProps> = ({ candidates }) =>
             {sortedCandidates.map((candidate, index) => {
               const effectiveScore =
                 candidate.effective_score ??
-                candidate.manual_score_override ??
                 candidate.hr_score_override ??
+                candidate.manual_score_override ??
                 candidate.ai_score ??
                 candidate.resume_score ??
                 0;
+              const rawAiScore = candidate.ai_score ?? candidate.resume_score;
               const hasOverride =
-                candidate.manual_score_override !== undefined &&
-                candidate.manual_score_override !== null;
+                (candidate.hr_score_override !== undefined && candidate.hr_score_override !== null) ||
+                (candidate.manual_score_override !== undefined && candidate.manual_score_override !== null);
               const displayName = candidate.full_name || candidate.name || "Candidate";
 
               return (
@@ -73,12 +75,27 @@ export const CandidateTable: React.FC<CandidateTableProps> = ({ candidates }) =>
                   <td className="px-5 py-4">
                     <NeuBadge status={candidate.status} />
                   </td>
+                  <td className="px-5 py-4">
+                    {candidate.stage ? (
+                      <div className="flex flex-col gap-0.5">
+                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium bg-[#1E201E] border border-[rgba(217,218,223,0.1)] text-[#D9DADF]">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#DD700B]" />
+                          Step {candidate.stage.step}: {candidate.stage.label}
+                        </span>
+                        <span className="text-[10px] text-[#8A8B82] pl-1">
+                          {candidate.stage.detail}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-[#8A8B82]">—</span>
+                    )}
+                  </td>
                   <td className="px-5 py-4 font-mono text-sm">
-                    {candidate.resume_score ? `${candidate.resume_score.toFixed(1)}%` : "Pending"}
+                    {rawAiScore !== null && rawAiScore !== undefined ? `${Math.round(rawAiScore)}%` : "Pending"}
                   </td>
                   <td className="px-5 py-4 font-mono text-sm font-semibold text-[#DD700B]">
                     <div className="flex items-center gap-1.5">
-                      <span>{effectiveScore.toFixed(1)}%</span>
+                      <span>{Math.round(effectiveScore)}%</span>
                       {hasOverride && (
                         <span title="Manually overridden by HR" className="text-[10px] bg-[#DD700B]/20 text-[#DD700B] px-1.5 py-0.5 rounded">
                           OVERRIDE
