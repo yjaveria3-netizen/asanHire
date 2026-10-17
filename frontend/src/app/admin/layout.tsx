@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import { Logo } from "@/components/brand/Logo";
 import { api } from "@/lib/api";
 import {
@@ -21,6 +22,26 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    try {
+      const supabase = createClient();
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error("Sign out error:", err);
+    } finally {
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.clear();
+          sessionStorage.clear();
+        } catch {}
+      }
+      router.push("/login?logout=true");
+      router.refresh();
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -111,13 +132,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
+                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-all ${
                     isActive
                       ? "neu-inset text-[#DD700B] font-semibold"
                       : "text-[#8A8B82] hover:text-[#D9DADF] hover:bg-[#2A2D2A]"
                   }`}
                 >
-                  <Icon className={`w-3.5 h-3.5 ${isActive ? "text-[#DD700B]" : "text-[#8A8B82]"}`} />
+                  <Icon className={`w-4 h-4 ${isActive ? "text-[#DD700B]" : "text-[#8A8B82]"}`} />
                   <span>{item.label}</span>
                 </Link>
               );
@@ -127,20 +148,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           {/* User & Logout */}
           <div className="flex items-center gap-3">
             <div className="hidden lg:flex flex-col text-right">
-              <span className="text-xs font-semibold text-[#D9DADF] leading-tight">
-                {currentUser?.email || "admin@asanhire.dev"}
+              <span className="text-sm font-semibold text-[#D9DADF] leading-tight">
+                {currentUser?.email || "Administrator"}
               </span>
-              <span className="text-[10px] text-[#8A8B82] font-mono capitalize">
-                {currentUser?.role || "Admin"}
+              <span className="text-xs text-[#8A8B82] font-mono capitalize">
+                Super Admin
               </span>
             </div>
-            <Link
-              href="/login"
-              title="Sign out"
-              className="p-2 text-[#8A8B82] hover:text-[#E57373] hover:bg-[#2A2D2A] rounded-xl transition-colors"
+            <button
+              type="button"
+              onClick={handleLogout}
+              disabled={loggingOut}
+              title="Sign out of Administrator Portal"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold text-[#8A8B82] hover:text-[#E57373] hover:bg-[#2A2D2A] border border-[#8A8B82]/20 transition-all cursor-pointer"
             >
               <LogOut className="w-4 h-4" />
-            </Link>
+              <span className="hidden sm:inline">{loggingOut ? "Signing out..." : "Sign Out"}</span>
+            </button>
           </div>
         </div>
       </header>

@@ -81,11 +81,18 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(url);
     }
 
-    // 2. Redirect to /hr if logged-in user visits /login
+    // 2. Redirect to /hr if logged-in user visits /login (unless explicit logout)
     if (isLoginPath && user) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/hr";
-      return NextResponse.redirect(url);
+      const isExplicitLogout =
+        request.nextUrl.searchParams.has("logout") ||
+        request.nextUrl.searchParams.has("signout") ||
+        request.nextUrl.searchParams.has("logged_out");
+
+      if (!isExplicitLogout) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/hr";
+        return NextResponse.redirect(url);
+      }
     }
   } catch {
     if (isHrPath) {

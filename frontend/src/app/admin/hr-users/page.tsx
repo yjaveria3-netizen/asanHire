@@ -20,6 +20,7 @@ import {
   XCircle,
   Clock,
   Building2,
+  ArrowLeft,
 } from "lucide-react";
 
 export default function AdminHRUsersPage() {
@@ -117,19 +118,30 @@ export default function AdminHRUsersPage() {
 
   return (
     <div className="flex flex-col gap-6 max-w-7xl mx-auto pb-16">
+      {/* Back to Admin Overview Navigation */}
+      <div>
+        <Link
+          href="/admin/overview"
+          className="inline-flex items-center gap-2 text-sm text-[#8A8B82] hover:text-[#DD700B] transition-colors py-1 px-2 -ml-2 rounded-lg hover:bg-[#242724]"
+        >
+          <ArrowLeft className="w-4 h-4 text-[#DD700B]" />
+          <span>Back to Admin Overview</span>
+        </Link>
+      </div>
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-[#D9DADF] flex items-center gap-2.5">
-            <Users className="w-6 h-6 text-[#DD700B]" />
+          <h1 className="text-2xl sm:text-3xl font-bold text-[#D9DADF] flex items-center gap-2.5">
+            <Users className="w-7 h-7 text-[#DD700B]" />
             HR Recruiters Directory
           </h1>
-          <p className="text-xs text-[#8A8B82] mt-1">
+          <p className="text-sm text-[#8A8B82] mt-1.5 leading-relaxed">
             Supervise recruiter workloads, override accountability ratios, and Reply-To communication configurations.
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs font-mono text-[#8A8B82] bg-[#242724] px-3 py-1.5 rounded-xl border border-[#D9DADF]/10">
+          <span className="text-sm font-mono text-[#8A8B82] bg-[#242724] px-3.5 py-1.5 rounded-xl border border-[#D9DADF]/10">
             Total HR Accounts: <strong className="text-[#DD700B]">{users.length}</strong>
           </span>
         </div>
@@ -218,13 +230,13 @@ export default function AdminHRUsersPage() {
           placeholder="Filter by email, name, organization, or reply-to..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="neu-inset w-full bg-[#1E201E] text-xs text-[#D9DADF] px-3 py-2 rounded-xl border border-[#8A8B82]/20 focus:outline-none focus:ring-1 focus:ring-[#DD700B]"
+          className="neu-inset w-full bg-[#1E201E] text-sm text-[#D9DADF] px-3.5 py-2.5 rounded-xl border border-[#8A8B82]/20 focus:outline-none focus:ring-1 focus:ring-[#DD700B]"
         />
       </div>
 
       {/* Table */}
       {loading ? (
-        <div className="min-h-[30vh] flex items-center justify-center text-xs text-[#8A8B82]">
+        <div className="min-h-[30vh] flex items-center justify-center text-sm text-[#8A8B82]">
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-[#DD700B] animate-ping" />
             Loading recruiter telemetry...
@@ -233,14 +245,14 @@ export default function AdminHRUsersPage() {
       ) : filteredUsers.length === 0 ? (
         <NeuCard variant="raised" className="p-8 text-center">
           <Users className="w-10 h-10 text-[#8A8B82] mx-auto mb-3 opacity-40" />
-          <h3 className="text-sm font-semibold text-[#D9DADF]">No HR Users Found</h3>
-          <p className="text-xs text-[#8A8B82] mt-1">No recruiters matched your search term.</p>
+          <h3 className="text-base font-semibold text-[#D9DADF]">No HR Users Found</h3>
+          <p className="text-sm text-[#8A8B82] mt-1">No recruiters matched your search term.</p>
         </NeuCard>
       ) : (
         <div className="neu-raised rounded-2xl overflow-hidden border border-[#D9DADF]/10">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-[#D9DADF]">
-              <thead className="bg-[#242724] border-b border-[#8A8B82]/20 uppercase tracking-wider text-[11px] text-[#8A8B82]">
+            <table className="w-full text-left text-sm text-[#D9DADF]">
+              <thead className="bg-[#242724] border-b border-[#8A8B82]/20 uppercase tracking-wider text-xs font-semibold text-[#8A8B82]">
                 <tr>
                   <th className="px-5 py-3.5 font-semibold">Recruiter / Org</th>
                   <th
@@ -293,10 +305,10 @@ export default function AdminHRUsersPage() {
                       className="hover:bg-[#2A2D2A] transition-colors group cursor-pointer"
                     >
                       <td className="px-5 py-4">
-                        <div className="font-semibold text-[#D9DADF] text-sm">
+                        <div className="font-semibold text-[#D9DADF] text-base">
                           {user.full_name || user.email}
                         </div>
-                        <div className="text-[11px] text-[#8A8B82] font-mono">
+                        <div className="text-xs text-[#8A8B82] font-mono mt-0.5">
                           {user.email} &bull; {user.organization || "Independent Recruiter"}
                         </div>
                       </td>
@@ -315,13 +327,13 @@ export default function AdminHRUsersPage() {
                           >
                             {(user.override_rate_pct || 0).toFixed(1)}%
                           </span>
-                          <span className="text-[10px] text-[#8A8B82]">
+                          <span className="text-xs text-[#8A8B82]">
                             ({user.overrides_count || 0} / {user.decisions_count || 0})
                           </span>
                           {isHighOverride && (
                             <span
                               title="Override rate exceeds 30% threshold with 5+ decisions"
-                              className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-[rgba(221,112,11,0.2)] text-[#DD700B] border border-[#DD700B]/40"
+                              className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-[rgba(221,112,11,0.2)] text-[#DD700B] border border-[#DD700B]/40"
                             >
                               HIGH
                             </span>
@@ -330,24 +342,24 @@ export default function AdminHRUsersPage() {
                       </td>
                       <td className="px-5 py-4">
                         <div className="flex flex-col gap-1">
-                          <span className="font-mono text-[11px] text-[#D9DADF] flex items-center gap-1">
-                            <Mail className="w-3 h-3 text-[#DD700B]" />
+                          <span className="font-mono text-xs text-[#D9DADF] flex items-center gap-1.5">
+                            <Mail className="w-3.5 h-3.5 text-[#DD700B]" />
                             {user.contact_email || user.email}
                           </span>
                           <div>
                             {user.reply_to_enabled ? (
-                              <span className="inline-flex items-center gap-1 text-[10px] text-[#8FD19E] bg-[#8FD19E]/10 px-1.5 py-0.5 rounded border border-[#8FD19E]/20">
-                                <CheckCircle2 className="w-2.5 h-2.5" /> Reply-To Enabled
+                              <span className="inline-flex items-center gap-1 text-xs text-[#8FD19E] bg-[#8FD19E]/10 px-2 py-0.5 rounded border border-[#8FD19E]/20">
+                                <CheckCircle2 className="w-3 h-3" /> Reply-To Enabled
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1 text-[10px] text-[#8A8B82] bg-[#1E201E] px-1.5 py-0.5 rounded border border-[#8A8B82]/20">
-                                <XCircle className="w-2.5 h-2.5" /> Suppressed
+                              <span className="inline-flex items-center gap-1 text-xs text-[#8A8B82] bg-[#1E201E] px-2 py-0.5 rounded border border-[#8A8B82]/20">
+                                <XCircle className="w-3 h-3" /> Suppressed
                               </span>
                             )}
                           </div>
                         </div>
                       </td>
-                      <td className="px-5 py-4 font-mono text-[11px] text-[#8A8B82]">
+                      <td className="px-5 py-4 font-mono text-xs text-[#8A8B82]">
                         {user.last_active
                           ? new Date(user.last_active).toLocaleDateString()
                           : "Never"}

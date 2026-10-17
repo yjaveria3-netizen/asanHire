@@ -126,13 +126,13 @@ export default function AdminOverviewPage() {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-[#D9DADF]">Platform Overview</h1>
-          <p className="text-xs text-[#8A8B82] mt-1">
+          <h1 className="text-2xl sm:text-3xl font-bold text-[#D9DADF]">Platform Overview</h1>
+          <p className="text-sm text-[#8A8B82] mt-1.5 leading-relaxed">
             Real-time operations dashboard, pipeline aggregates, and 14-day activity trends.
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-[11px] font-mono text-[#8A8B82] bg-[#242724] px-3 py-1.5 rounded-xl border border-[#D9DADF]/10">
+          <span className="text-xs font-mono text-[#8A8B82] bg-[#242724] px-3.5 py-1.5 rounded-xl border border-[#D9DADF]/10">
             System Status: <strong className="text-[#8FD19E]">Healthy & Audited</strong>
           </span>
         </div>
@@ -145,14 +145,14 @@ export default function AdminOverviewPage() {
           const CardContent = (
             <div className="flex flex-col justify-between h-full">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-[#8A8B82] font-medium truncate">{m.label}</span>
+                <span className="text-sm text-[#8A8B82] font-medium truncate">{m.label}</span>
                 <Icon className={`w-4 h-4 shrink-0 ${m.color}`} />
               </div>
               <div>
                 <span className="text-2xl md:text-3xl font-bold font-mono text-[#D9DADF]">
                   {m.value}
                 </span>
-                <p className="text-[10px] text-[#8A8B82] mt-1 truncate">{m.hint}</p>
+                <p className="text-xs text-[#8A8B82] mt-1 truncate">{m.hint}</p>
               </div>
             </div>
           );
