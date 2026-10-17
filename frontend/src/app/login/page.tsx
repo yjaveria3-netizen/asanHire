@@ -267,13 +267,13 @@ export default function LoginPage() {
               Your recruiter account for <strong className="text-[#D9DADF]">{pendingEmail || email}</strong> has been registered. Before you can access the Sovereign HR Portal, an administrator must review and approve your account.
             </p>
 
-            <div className="w-full neu-inset rounded-xl p-4 border border-[#DD700B]/20 bg-[#1E201E] text-left mb-6">
-              <div className="flex items-start gap-2.5">
+            <div className="w-full neu-inset rounded-xl p-4 border border-[#DD700B]/30 bg-[#1E201E] text-left mb-6">
+              <div className="flex items-start gap-3">
                 <AlertCircle className="w-5 h-5 text-[#DD700B] shrink-0 mt-0.5" />
-                <div className="text-xs text-[#D9DADF]">
+                <div className="text-sm text-[#D9DADF]">
                   <p className="font-semibold text-[#DD700B] mb-1">Confirmation Required</p>
                   <p className="text-[#8A8B82] leading-relaxed">
-                    Please email <a href="mailto:admin@asanhire.dev" className="text-[#DD700B] underline font-mono font-medium">admin@asanhire.dev</a> from your official corporate email with your organization details to expedite verification and account activation.
+                    Please email <a href="mailto:yjaveria3@gmail.com" className="text-[#DD700B] underline font-mono font-medium hover:text-[#D9DADF]">yjaveria3@gmail.com</a> from your official corporate email with your organization details to expedite verification and account activation.
                   </p>
                 </div>
               </div>

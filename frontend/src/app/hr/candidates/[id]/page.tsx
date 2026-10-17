@@ -166,8 +166,8 @@ export default function CandidateDetailPage() {
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <Link href={`/hr/jobs/${candidate.job_id}`}>
-              <NeuButton size="sm" variant="ghost">
-                <ArrowLeft className="w-4 h-4 mr-1" /> Requisition Board
+              <NeuButton size="sm" variant="secondary">
+                <ArrowLeft className="w-4 h-4 mr-1" /> Back to Job
               </NeuButton>
             </Link>
             <div>

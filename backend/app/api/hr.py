@@ -53,7 +53,7 @@ def _record_override_event(
 ) -> Optional[Dict[str, Any]]:
     hr_org = ""
     try:
-        prof_res = client.table("hr_profiles").select("organization").eq("id", hr_user_id).execute()
+        prof_res = client.table("hr_profiles").select("organization").eq("user_id", hr_user_id).execute()
         if prof_res and prof_res.data:
             hr_org = prof_res.data[0].get("organization") or ""
     except Exception:

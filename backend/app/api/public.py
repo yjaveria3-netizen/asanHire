@@ -321,7 +321,7 @@ async def register_role(req: RegisterRoleRequest):
         return {
             "role": "hr",
             "status": "pending",
-            "message": "HR account created. Awaiting administrator approval before access is granted. Please email admin@asanhire.dev.",
+            "message": "HR account created. Awaiting administrator approval before access is granted. Please email yjaveria3@gmail.com.",
         }
 
     else:

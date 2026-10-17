@@ -88,11 +88,11 @@ export default function HRDashboardPage() {
               <span className="w-2 h-2 rounded-full bg-[#8FD19E] animate-pulse" /> FastMCP Online
             </span>
           </div>
-          <h1 className="text-3xl font-extrabold text-[#D9DADF]">
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-[#D9DADF]">
             Executive Overview
           </h1>
-          <p className="text-xs text-[#8A8B82] mt-1">
-            Logged in as <span className="text-[#DD700B] font-mono">{email || "hr@asanhire.dev"}</span> &bull; Unconditional human sovereignty active.
+          <p className="text-sm text-[#8A8B82] mt-1.5">
+            Logged in as <span className="text-[#DD700B] font-mono font-medium">{email || "Recruiter"}</span> &bull; Unconditional human decision sovereignty active.
           </p>
         </div>
 
@@ -107,7 +107,7 @@ export default function HRDashboardPage() {
             variant="ghost"
             onClick={handleLogout}
             disabled={loggingOut}
-            className="text-xs text-[#8A8B82] hover:text-[#E57373]"
+            className="text-sm text-[#8A8B82] hover:text-[#E57373]"
           >
             <LogOut className="w-3.5 h-3.5 mr-1" />
             {loggingOut ? "Signing out..." : "Sign Out"}
@@ -117,9 +117,9 @@ export default function HRDashboardPage() {
 
       {/* KPI Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <NeuCard variant="raised" className="p-5 flex flex-col justify-between">
+        <NeuCard variant="raised" className="p-5 flex flex-col justify-between hover:border-[#DD700B]/40 transition-all">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-[#8A8B82]">Active Positions</span>
+            <span className="text-sm font-medium text-[#8A8B82]">Active Positions</span>
             <div className="w-8 h-8 rounded-lg bg-[#DD700B]/10 border border-[#DD700B]/20 flex items-center justify-center text-[#DD700B]">
               <Briefcase className="w-4 h-4" />
             </div>
@@ -128,8 +128,8 @@ export default function HRDashboardPage() {
             <div className="text-3xl font-bold text-[#D9DADF]">
               {loading ? "..." : jobs.length || 3}
             </div>
-            <div className="text-[11px] text-[#8FD19E] mt-1 flex items-center gap-1">
-              <CheckCircle2 className="w-3 h-3" /> All rubrics synthesized
+            <div className="text-xs text-[#8FD19E] mt-1 flex items-center gap-1">
+              <CheckCircle2 className="w-3.5 h-3.5" /> All rubrics synthesized
             </div>
           </div>
         </NeuCard>

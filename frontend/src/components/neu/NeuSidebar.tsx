@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Logo } from "@/components/brand/Logo";
-import { LayoutDashboard, Briefcase, PlusCircle, Palette, LogOut, ShieldAlert } from "lucide-react";
+import { LayoutDashboard, Briefcase, PlusCircle, LogOut, ShieldAlert } from "lucide-react";
 import { api } from "@/lib/api";
 
 export const NeuSidebar: React.FC = () => {
@@ -38,7 +38,6 @@ export const NeuSidebar: React.FC = () => {
     { label: "Jobs", href: "/hr/jobs", icon: Briefcase },
     { label: "Post Job", href: "/hr/jobs/new", icon: PlusCircle },
     { label: "Overrides", href: "/hr/overrides", icon: ShieldAlert, badge: unansweredCount },
-    { label: "Design Check", href: "/hr/design-check", icon: Palette },
   ];
 
   return (

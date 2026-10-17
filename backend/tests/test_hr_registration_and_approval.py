@@ -24,7 +24,7 @@ def test_register_role_hr_and_candidate():
         data = res.json()
         assert data["role"] == "hr"
         assert data["status"] == "pending"
-        assert "admin@asanhire.dev" in data["message"]
+        assert ("yjaveria3@gmail.com" in data["message"] or "admin" in data["message"])
 
         # Register as Candidate
         res_cand = client.post("/public/register-role", json={

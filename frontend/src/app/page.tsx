@@ -206,28 +206,25 @@ export default function HomePage() {
 
         {/* Interactive Tabbed Content Section (Switches on click of the 4 sub-tabs) */}
         <section id="tab-panel" className="py-8 px-4 sm:px-6 max-w-7xl mx-auto w-full scroll-mt-24">
-          {/* Active Tab Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 border-b border-[#383A38] pb-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-mono uppercase tracking-widest text-[#DD700B]">
-                  Live Interactive Module
-                </span>
-                <span className="text-xs text-[#8A8B82]">&bull;</span>
-                <span className="text-xs text-[#8A8B82]">
-                  {TABS.find((t) => t.id === activeTab)?.summary}
-                </span>
-              </div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-[#D9DADF] mt-1">
+          {/* Active Tab Header - Clean, Roomy, Uncluttered */}
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8 border-b border-[#383A38]/80 pb-6">
+            <div className="max-w-2xl">
+              <span className="text-xs font-mono uppercase tracking-widest text-[#DD700B] font-semibold">
+                Autonomous Pipeline Demonstration
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-bold text-[#D9DADF] mt-1.5 tracking-tight">
                 {activeTab === "cockpit" && "Hiring Cockpit: Candidate Review & Human Veto"}
                 {activeTab === "rubrics" && "Job & Rubrics: Objective Criteria Synthesis"}
                 {activeTab === "screening" && "Voice Screening: Real-Time Audio Interview"}
                 {activeTab === "integrity" && "Integrity Radar: Proctoring & Tamper-Proof Audit"}
               </h2>
+              <p className="text-sm text-[#8A8B82] mt-2 leading-relaxed">
+                {TABS.find((t) => t.id === activeTab)?.summary}
+              </p>
             </div>
 
-            {/* Quick Switcher Buttons */}
-            <div className="flex items-center gap-1.5 self-start sm:self-center flex-wrap">
+            {/* Roomy Segmented Switcher */}
+            <div className="flex items-center gap-2 p-1.5 rounded-xl bg-[#242724] border border-[#383A38] self-start md:self-auto overflow-x-auto max-w-full">
               {TABS.map((t) => {
                 const Icon = t.icon;
                 const isSelected = activeTab === t.id;
@@ -236,13 +233,13 @@ export default function HomePage() {
                     key={t.id}
                     type="button"
                     onClick={() => handleTabSelect(t.id)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap select-none ${
                       isSelected
-                        ? "bg-[#DD700B] text-[#1E201E] font-bold"
-                        : "bg-[#242724] text-[#8A8B82] hover:text-[#D9DADF] border border-[#343834]"
+                        ? "bg-[#DD700B] text-[#1E201E] font-bold shadow-md shadow-[#DD700B]/20"
+                        : "text-[#8A8B82] hover:text-[#D9DADF] hover:bg-[#2E312E]"
                     }`}
                   >
-                    <Icon className="w-3.5 h-3.5" />
+                    <Icon className="w-4 h-4" />
                     <span>{t.label}</span>
                   </button>
                 );
@@ -673,23 +670,23 @@ export default function HomePage() {
             </span>
           </div>
 
-          <div className="flex items-center gap-6 text-xs text-[#8A8B82]">
+          <div className="flex items-center gap-6 text-sm text-[#8A8B82]">
             <Link href="/login" className="hover:text-[#DD700B] transition-colors">
               Recruiter Portal
             </Link>
             <Link href="/interview/demo-token" className="hover:text-[#DD700B] transition-colors">
               Candidate Screening
             </Link>
-            <Link href="/hr/design-check" className="hover:text-[#DD700B] transition-colors">
-              Design System
+            <Link href="/login" className="hover:text-[#DD700B] transition-colors">
+              Administrative Supervision
             </Link>
           </div>
         </div>
 
-        <div className="max-w-7xl mx-auto mt-6 pt-6 border-t border-[#383A38]/50 flex flex-col sm:flex-row justify-between items-center gap-2 text-[11px] text-[#8A8B82]">
+        <div className="max-w-7xl mx-auto mt-6 pt-6 border-t border-[#383A38]/50 flex flex-col sm:flex-row justify-between items-center gap-2 text-xs text-[#8A8B82]">
           <p>&copy; {new Date().getFullYear()} asanHire Inc. All rights reserved.</p>
-          <p className="font-mono text-[#8A8B82]">
-            Palette: #1E201E &bull; #262826 &bull; #DD700B &bull; #FCF8D8 &bull; #D9DADF
+          <p className="text-[#8A8B82]">
+            Autonomous Recruitment Intelligence &bull; Human-in-the-Loop Sovereign Protocol
           </p>
         </div>
       </footer>

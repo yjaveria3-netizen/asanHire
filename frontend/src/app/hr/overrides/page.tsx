@@ -19,11 +19,14 @@ import {
   Search,
   Filter,
   ExternalLink,
+  ArrowLeft,
+  RotateCcw,
 } from "lucide-react";
 
 export default function HROverridesPage() {
   const [overrides, setOverrides] = useState<HROverrideEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [answerDrafts, setAnswerDrafts] = useState<Record<string, string>>({});
@@ -31,12 +34,15 @@ export default function HROverridesPage() {
   const [feedback, setFeedback] = useState<string | null>(null);
 
   const loadOverrides = async () => {
+    setLoading(true);
+    setLoadError(null);
     try {
       const data = await api.getHROverrides();
       const list = Array.isArray(data) ? data : ((data as any)?.overrides || []);
       setOverrides(list);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to load overrides:", err);
+      setLoadError(err?.message || "Failed to load override records. Please retry.");
       setOverrides([]);
     } finally {
       setLoading(false);
@@ -117,23 +123,50 @@ export default function HROverridesPage() {
 
   return (
     <div className="flex flex-col gap-6 max-w-6xl mx-auto pb-16">
+      {/* Back to HR Dashboard Navigation */}
+      <div>
+        <Link
+          href="/hr"
+          className="inline-flex items-center gap-2 text-sm text-[#8A8B82] hover:text-[#DD700B] transition-colors py-1 px-2 -ml-2 rounded-lg hover:bg-[#242724]"
+        >
+          <ArrowLeft className="w-4 h-4 text-[#DD700B]" />
+          <span>Back to Dashboard</span>
+        </Link>
+      </div>
+
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-[#D9DADF] flex items-center gap-2.5">
-            <ShieldAlert className="w-6 h-6 text-[#DD700B]" />
+          <h1 className="text-2xl sm:text-3xl font-bold text-[#D9DADF] flex items-center gap-2.5">
+            <ShieldAlert className="w-7 h-7 text-[#DD700B]" />
             Override Accountability Trail
           </h1>
-          <p className="text-xs text-[#8A8B82] mt-1">
+          <p className="text-sm text-[#8A8B82] mt-1.5 leading-relaxed">
             History of sovereign deviations, manual score adjustments, and status overrides with administration review.
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs font-mono text-[#8A8B82] bg-[#242724] px-3 py-1.5 rounded-xl border border-[#D9DADF]/10">
-            Total Overrides: <strong className="text-[#DD700B]">{overrides.length}</strong>
+          <span className="text-sm font-mono text-[#8A8B82] bg-[#242724] px-3.5 py-1.5 rounded-xl border border-[#D9DADF]/10">
+            Total Overrides: <strong className="text-[#DD700B]">{safeOverrides.length}</strong>
           </span>
         </div>
       </div>
+
+      {/* Friendly Error Banner */}
+      {loadError && (
+        <div className="p-4 rounded-xl bg-[rgba(229,115,115,0.12)] border border-[#E57373]/30 text-sm text-[#E57373] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <AlertTriangle className="w-5 h-5 shrink-0 text-[#E57373]" />
+            <div>
+              <p className="font-semibold text-[#D9DADF]">Unable to load latest override ledger</p>
+              <p className="text-xs text-[#8A8B82] mt-0.5">{loadError}</p>
+            </div>
+          </div>
+          <NeuButton size="sm" variant="secondary" onClick={() => loadOverrides()}>
+            <RotateCcw className="w-3.5 h-3.5 mr-1" /> Retry
+          </NeuButton>
+        </div>
+      )}
 
       {feedback && (
         <div className="p-3.5 rounded-xl bg-[rgba(221,112,11,0.12)] border border-[#DD700B]/30 text-xs text-[#DD700B] flex items-center justify-between">

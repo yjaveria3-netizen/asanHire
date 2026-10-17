@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { api } from "@/lib/api";
 import { NeuCard } from "@/components/neu/NeuCard";
 import { NeuButton } from "@/components/neu/NeuButton";
@@ -15,6 +16,7 @@ import {
   CheckCircle2,
   Lock,
   ShieldAlert,
+  ArrowLeft,
 } from "lucide-react";
 
 export default function AdminPasswordSettingsPage() {
@@ -78,13 +80,26 @@ export default function AdminPasswordSettingsPage() {
 
   return (
     <div className="max-w-2xl mx-auto flex flex-col gap-6 pb-12">
+      {/* Back to Overview if not locked */}
+      {!currentUser?.must_change_password && (
+        <div>
+          <Link
+            href="/admin/overview"
+            className="inline-flex items-center gap-2 text-sm text-[#8A8B82] hover:text-[#DD700B] transition-colors py-1 px-2 -ml-2 rounded-lg hover:bg-[#242724]"
+          >
+            <ArrowLeft className="w-4 h-4 text-[#DD700B]" />
+            <span>Back to Admin Overview</span>
+          </Link>
+        </div>
+      )}
+
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-[#D9DADF] flex items-center gap-2.5">
-          <KeyRound className="w-6 h-6 text-[#DD700B]" />
+        <h1 className="text-2xl sm:text-3xl font-bold text-[#D9DADF] flex items-center gap-2.5">
+          <KeyRound className="w-7 h-7 text-[#DD700B]" />
           Admin Security Settings
         </h1>
-        <p className="text-xs text-[#8A8B82] mt-1">
+        <p className="text-sm text-[#8A8B82] mt-1.5 leading-relaxed">
           Manage administrator authentication credentials, session security, and rotation policies.
         </p>
       </div>

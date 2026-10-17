@@ -99,20 +99,33 @@ async def get_hr_user(credentials: Optional[HTTPAuthorizationCredentials] = Depe
     email = data.get("email", "")
 
     db = get_supabase_service_client()
+    # Check if user has an admin role
+    try:
+        r_res = db.table("user_roles").select("role").eq("user_id", user_id).execute()
+        user_role = r_res.data[0].get("role") if (r_res and r_res.data) else "hr"
+    except Exception:
+        user_role = "hr"
+
+    if user_role == "admin":
+        hr_user = HRUser(id=user_id, email=email, role="admin")
+        _prune_auth_cache(now)
+        _auth_cache[token_hash] = (hr_user, now + 30.0)
+        return hr_user
+
     # Check HR approval status in hr_profiles / hr_access_requests
     try:
-        p_res = db.table("hr_profiles").select("status").eq("id", user_id).execute()
+        p_res = db.table("hr_profiles").select("*").eq("user_id", user_id).execute()
         if p_res and p_res.data:
             hr_status = p_res.data[0].get("status", "active")
             if hr_status == "pending":
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Recruiter account pending administrator approval. Please contact admin@asanhire.dev.",
+                    detail="Recruiter account pending administrator approval. Please contact yjaveria3@gmail.com.",
                 )
             if hr_status == "suspended":
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Recruiter account suspended. Please contact administrator.",
+                    detail="Recruiter account suspended. Please contact yjaveria3@gmail.com.",
                 )
         else:
             # Check if there is an access request pending
@@ -120,13 +133,13 @@ async def get_hr_user(credentials: Optional[HTTPAuthorizationCredentials] = Depe
             if req_res and req_res.data and req_res.data[0].get("status") == "pending":
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Recruiter account pending administrator approval. Please contact admin@asanhire.dev.",
+                    detail="Recruiter account pending administrator approval. Please contact yjaveria3@gmail.com.",
                 )
-            # Sync contact_email in hr_profiles (Part G1 / F5 requirement)
+            # Sync contact_email in hr_profiles
             db.table("hr_profiles").upsert({
-                "id": user_id,
+                "user_id": user_id,
                 "contact_email": email,
-            }, on_conflict="id").execute()
+            }, on_conflict="user_id").execute()
     except HTTPException:
         raise
     except Exception as e:
@@ -215,36 +228,37 @@ async def get_current_user_profile(
     role = role_row.get("role", "hr")
     must_change = bool(role_row.get("must_change_password", False))
 
-    # HR Profile lookup / sync
-    hr_profile_data: Dict[str, Any] = {
-        "contact_email": email,
-        "organization": "",
-        "full_name": "",
-        "job_title": "",
-        "reply_to_enabled": True,
-        "status": "active",
-    }
-    try:
-        p_res = db.table("hr_profiles").select("*").eq("id", user_id).execute()
-        if p_res and p_res.data:
-            existing = p_res.data[0]
-            hr_profile_data.update(existing)
-            # Sync contact_email if different
-            if existing.get("contact_email") != email:
-                db.table("hr_profiles").update({"contact_email": email}).eq("id", user_id).execute()
-                hr_profile_data["contact_email"] = email
-        else:
-            # Check if pending in hr_access_requests
-            req_res = db.table("hr_access_requests").select("status").eq("user_id", user_id).execute()
-            status_val = "pending" if (req_res and req_res.data and req_res.data[0].get("status") == "pending") else "active"
-            hr_profile_data["status"] = status_val
-            db.table("hr_profiles").insert({
-                "id": user_id,
-                "contact_email": email,
-                "status": status_val,
-            }).execute()
-    except Exception:
-        pass
+    # HR Profile lookup / sync (only for non-admin HR accounts)
+    hr_profile_data: Optional[Dict[str, Any]] = None
+    if role != "admin":
+        hr_profile_data = {
+            "contact_email": email,
+            "organization": "",
+            "full_name": "",
+            "job_title": "",
+            "reply_to_enabled": True,
+            "status": "active",
+        }
+        try:
+            p_res = db.table("hr_profiles").select("*").eq("user_id", user_id).execute()
+            if p_res and p_res.data:
+                existing = p_res.data[0]
+                hr_profile_data.update(existing)
+                # Sync contact_email if different
+                if existing.get("contact_email") != email:
+                    db.table("hr_profiles").update({"contact_email": email}).eq("user_id", user_id).execute()
+                    hr_profile_data["contact_email"] = email
+            else:
+                # Check if pending in hr_access_requests
+                req_res = db.table("hr_access_requests").select("status").eq("user_id", user_id).execute()
+                status_val = "pending" if (req_res and req_res.data and req_res.data[0].get("status") == "pending") else "active"
+                hr_profile_data["status"] = status_val
+                db.table("hr_profiles").insert({
+                    "user_id": user_id,
+                    "contact_email": email,
+                }).execute()
+        except Exception:
+            pass
 
     return {
         "id": user_id,

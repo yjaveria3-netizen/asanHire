@@ -11,6 +11,7 @@ import { OVERRIDE_REASON_CATEGORIES } from "@/lib/constants";
 import {
   ShieldAlert,
   ArrowRight,
+  ArrowLeft,
   Search,
   Filter,
   CheckCircle2,
@@ -22,11 +23,13 @@ import {
   Eye,
   X,
   ExternalLink,
+  RotateCcw,
 } from "lucide-react";
 
 export default function AdminOverridesPage() {
   const [overrides, setOverrides] = useState<HROverrideEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // Filters
   const [search, setSearch] = useState("");
@@ -41,11 +44,16 @@ export default function AdminOverridesPage() {
   const [feedback, setFeedback] = useState<string | null>(null);
 
   const fetchOverrides = async () => {
+    setLoading(true);
+    setLoadError(null);
     try {
       const data = await api.getAdminOverrides();
-      setOverrides(data);
-    } catch (err) {
+      const list = Array.isArray(data) ? data : ((data as any)?.overrides || []);
+      setOverrides(list);
+    } catch (err: any) {
       console.error("Failed to load admin overrides:", err);
+      setLoadError(err?.message || "Failed to load override records. Please retry.");
+      setOverrides([]);
     } finally {
       setLoading(false);
     }
@@ -101,7 +109,10 @@ export default function AdminOverridesPage() {
     return found ? found.label : catVal.replace("_", " ");
   };
 
-  const filteredOverrides = overrides.filter((item) => {
+  const safeOverrides = Array.isArray(overrides) ? overrides : [];
+
+  const filteredOverrides = safeOverrides.filter((item) => {
+    if (!item) return false;
     if (categoryFilter !== "all" && item.reason_category !== categoryFilter) {
       return false;
     }
@@ -123,37 +134,64 @@ export default function AdminOverridesPage() {
       const matchEmail = item.hr_email?.toLowerCase().includes(q);
       const matchJob = item.job_title?.toLowerCase().includes(q);
       const matchReason = item.reason?.toLowerCase().includes(q);
-      return matchCand || matchEmail || matchJob || matchReason;
+      return Boolean(matchCand || matchEmail || matchJob || matchReason);
     }
     return true;
   });
 
-  const worthALookCount = overrides.filter((o) => o.worth_a_look).length;
+  const worthALookCount = safeOverrides.filter((o) => o?.worth_a_look).length;
 
   return (
     <div className="flex flex-col gap-6 max-w-7xl mx-auto pb-16">
+      {/* Back to Admin Overview Navigation */}
+      <div>
+        <Link
+          href="/admin/overview"
+          className="inline-flex items-center gap-2 text-sm text-[#8A8B82] hover:text-[#DD700B] transition-colors py-1 px-2 -ml-2 rounded-lg hover:bg-[#242724]"
+        >
+          <ArrowLeft className="w-4 h-4 text-[#DD700B]" />
+          <span>Back to Admin Overview</span>
+        </Link>
+      </div>
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-[#D9DADF] flex items-center gap-2.5">
-            <ShieldAlert className="w-6 h-6 text-[#DD700B]" />
+          <h1 className="text-2xl sm:text-3xl font-bold text-[#D9DADF] flex items-center gap-2.5">
+            <ShieldAlert className="w-7 h-7 text-[#DD700B]" />
             Administrative Override Supervision
           </h1>
-          <p className="text-xs text-[#8A8B82] mt-1">
+          <p className="text-sm text-[#8A8B82] mt-1.5 leading-relaxed">
             Audit sovereign recruiter decisions, review justifications, and dispatch compliance inquiries.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-mono text-[#8A8B82] bg-[#242724] px-3 py-1.5 rounded-xl border border-[#D9DADF]/10">
-            Total Overrides: <strong className="text-[#DD700B]">{overrides.length}</strong>
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-mono text-[#8A8B82] bg-[#242724] px-3.5 py-1.5 rounded-xl border border-[#D9DADF]/10">
+            Total Overrides: <strong className="text-[#DD700B]">{safeOverrides.length}</strong>
           </span>
           {worthALookCount > 0 && (
-            <span className="text-xs font-mono text-[#DD700B] bg-[rgba(221,112,11,0.15)] px-3 py-1.5 rounded-xl border border-[#DD700B]/30 font-semibold">
+            <span className="text-sm font-mono text-[#DD700B] bg-[rgba(221,112,11,0.15)] px-3.5 py-1.5 rounded-xl border border-[#DD700B]/30 font-semibold">
               Worth a Look: {worthALookCount}
             </span>
           )}
         </div>
       </div>
+
+      {/* Friendly Error Banner */}
+      {loadError && (
+        <div className="p-4 rounded-xl bg-[rgba(229,115,115,0.12)] border border-[#E57373]/30 text-sm text-[#E57373] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <AlertTriangle className="w-5 h-5 shrink-0 text-[#E57373]" />
+            <div>
+              <p className="font-semibold text-[#D9DADF]">Unable to load latest override logs</p>
+              <p className="text-xs text-[#8A8B82] mt-0.5">{loadError}</p>
+            </div>
+          </div>
+          <NeuButton size="sm" variant="secondary" onClick={() => fetchOverrides()}>
+            <RotateCcw className="w-3.5 h-3.5 mr-1" /> Retry
+          </NeuButton>
+        </div>
+      )}
 
       {feedback && (
         <div className="p-3.5 rounded-xl bg-[rgba(221,112,11,0.12)] border border-[#DD700B]/30 text-xs text-[#DD700B] flex items-center justify-between">

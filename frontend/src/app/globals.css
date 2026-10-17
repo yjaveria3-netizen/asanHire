@@ -53,6 +53,11 @@ h1, h2, h3, h4, h5, h6, p, span, a, button, input, textarea, select, nav, label,
   background-color: var(--surface);
   box-shadow: none;
   border: 1px solid #343834;
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.neu-raised:hover {
+  border-color: rgba(221, 112, 11, 0.35);
 }
 
 /* Flat Inset Panel (Clean Flat Fill, Thin Border) */
@@ -60,6 +65,23 @@ h1, h2, h3, h4, h5, h6, p, span, a, button, input, textarea, select, nav, label,
   background-color: #242724;
   box-shadow: none;
   border: 1px solid #2E312E;
+  transition: border-color 0.2s ease;
+}
+
+/* Custom sleek scrollbar */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+::-webkit-scrollbar-track {
+  background: #1A1C1A;
+}
+::-webkit-scrollbar-thumb {
+  background: #383A38;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #DD700B;
 }
 
 /* Primary Action Button (Flat Solid Cinnamon, Thin Border, No Glow) */
