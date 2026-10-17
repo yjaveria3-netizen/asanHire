@@ -7,6 +7,12 @@ interface RobotWorkerProps {
 export const RobotWorker: React.FC<RobotWorkerProps> = ({ className = "" }) => {
   return (
     <div className={`relative inline-flex items-center justify-center select-none ${className}`}>
+      {/* Expanded Ambient Orange Gradient Glow Aura (Expanded limit with smooth wide falloff) */}
+      <div
+        className="absolute -inset-14 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#DD700B]/35 via-[#DD700B]/12 to-transparent blur-3xl rounded-full pointer-events-none -z-10"
+        aria-hidden="true"
+      />
+
       {/* Softly drifting decorative dots (subtle movement in site palette) */}
       <span
         className="absolute -top-3 -left-4 w-2 h-2 rounded-full bg-[#DD700B] animate-drift-1 pointer-events-none"
@@ -31,6 +37,13 @@ export const RobotWorker: React.FC<RobotWorkerProps> = ({ className = "" }) => {
           xmlns="http://www.w3.org/2000/svg"
         >
           <defs>
+            {/* Expanded Ambient Warm Orange Glow Filter & Gradient */}
+            <radialGradient id="robot-expanded-orange-glow" cx="44%" cy="46%" r="68%">
+              <stop offset="0%" stopColor="#DD700B" stopOpacity="0.45" />
+              <stop offset="35%" stopColor="#DD700B" stopOpacity="0.25" />
+              <stop offset="65%" stopColor="#DD700B" stopOpacity="0.09" />
+              <stop offset="100%" stopColor="#DD700B" stopOpacity="0" />
+            </radialGradient>
             <filter id="worker-screen-glow" x="-20%" y="-20%" width="140%" height="140%">
               <feGaussianBlur stdDeviation="3" result="glow" />
               <feMerge>
@@ -39,6 +52,9 @@ export const RobotWorker: React.FC<RobotWorkerProps> = ({ className = "" }) => {
               </feMerge>
             </filter>
           </defs>
+
+          {/* Expanded Orange Radial Aura behind the entire robot & laptop */}
+          <circle cx="92" cy="74" r="92" fill="url(#robot-expanded-orange-glow)" pointerEvents="none" />
 
           {/* Desk / Platform Surface */}
           <line
