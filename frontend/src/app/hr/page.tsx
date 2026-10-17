@@ -43,6 +43,10 @@ export default function HRDashboardPage() {
           data: { user },
         } = await supabase.auth.getUser();
         if (user) {
+          if (user.user_metadata?.role === "candidate") {
+            router.replace("/jobs");
+            return;
+          }
           setEmail(user.email || null);
         }
       } catch {

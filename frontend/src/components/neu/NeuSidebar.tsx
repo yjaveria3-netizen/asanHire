@@ -13,16 +13,40 @@ export const NeuSidebar: React.FC = () => {
   const router = useRouter();
   const [unansweredCount, setUnansweredCount] = useState<number>(0);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string>("Recruiter");
   const [loggingOut, setLoggingOut] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => {
-      if (isMounted && data?.user?.email) {
-        setUserEmail(data.user.email);
-      }
-    }).catch(() => {});
+
+    api
+      .getMe()
+      .then((profile) => {
+        if (!isMounted) return;
+        if (profile?.role === "candidate") {
+          router.replace("/jobs");
+          return;
+        }
+        if (profile?.email) {
+          setUserEmail(profile.email);
+        }
+        const title = profile?.hr_profile?.job_title || (profile?.role === "admin" ? "Administrator" : "Recruiter");
+        setUserRole(title);
+      })
+      .catch(() => {
+        const supabase = createClient();
+        supabase.auth
+          .getUser()
+          .then(({ data }) => {
+            if (isMounted && data?.user?.email) {
+              setUserEmail(data.user.email);
+              if (data.user.user_metadata?.role === "candidate") {
+                router.replace("/jobs");
+              }
+            }
+          })
+          .catch(() => {});
+      });
 
     api
       .getHROverrides()
@@ -42,7 +66,7 @@ export const NeuSidebar: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [pathname]);
+  }, [pathname, router]);
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -126,7 +150,7 @@ export const NeuSidebar: React.FC = () => {
             <p className="text-sm font-semibold text-[#D9DADF] truncate" title={userEmail || "Recruiter"}>
               {userEmail || "Recruiter Workspace"}
             </p>
-            <p className="text-xs text-[#8A8B82] font-mono">Lead Recruiter</p>
+            <p className="text-xs text-[#8A8B82] font-mono">{userRole}</p>
           </div>
           <button
             type="button"
