@@ -7,6 +7,7 @@ import { RobotWorker } from "@/components/brand/RobotWorker";
 import { CollaborationIllustration } from "@/components/brand/CollaborationIllustration";
 import { NeuCard } from "@/components/neu/NeuCard";
 import { NeuButton } from "@/components/neu/NeuButton";
+import { AnimatedCounter } from "@/components/neu/AnimatedCounter";
 import {
   Shield,
   Mic,
@@ -203,8 +204,8 @@ export default function HomePage() {
         {/* Interactive Tabbed Content Section (Switches on click of the 4 sub-tabs) */}
         <section id="tab-panel" className="py-8 px-4 sm:px-6 max-w-7xl mx-auto w-full scroll-mt-24">
           {/* Active Tab Header - Clean, Roomy, Uncluttered */}
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8 border-b border-[#383A38]/80 pb-6">
-            <div className="max-w-2xl">
+          <div className="flex flex-col gap-5 mb-8 border-b border-[#383A38]/80 pb-6">
+            <div>
               <span className="text-xs font-mono uppercase tracking-widest text-[#DD700B] font-semibold">
                 Autonomous Pipeline Demonstration
               </span>
@@ -219,8 +220,8 @@ export default function HomePage() {
               </p>
             </div>
 
-            {/* Roomy Segmented Switcher */}
-            <div className="flex items-center gap-2 p-1.5 rounded-xl bg-[#242724] border border-[#383A38] self-start md:self-auto overflow-x-auto max-w-full">
+            {/* Roomy Segmented Switcher - 1 Single Line, Zero Scroll */}
+            <div className="w-full grid grid-cols-2 sm:grid-cols-4 gap-2 p-1.5 rounded-xl bg-[#242724] border border-[#383A38]">
               {TABS.map((t) => {
                 const Icon = t.icon;
                 const isSelected = activeTab === t.id;
@@ -229,14 +230,14 @@ export default function HomePage() {
                     key={t.id}
                     type="button"
                     onClick={() => handleTabSelect(t.id)}
-                    className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap select-none ${
+                    className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-all text-center select-none ${
                       isSelected
                         ? "bg-[#DD700B] text-[#1E201E] font-bold shadow-md shadow-[#DD700B]/20"
                         : "text-[#8A8B82] hover:text-[#D9DADF] hover:bg-[#2E312E]"
                     }`}
                   >
-                    <Icon className="w-4 h-4" />
-                    <span>{t.label}</span>
+                    <Icon className="w-4 h-4 shrink-0" />
+                    <span className="truncate">{t.label}</span>
                   </button>
                 );
               })}
@@ -276,15 +277,21 @@ export default function HomePage() {
                         </p>
                       </div>
                       <div className="text-right">
-                        <span className="text-lg font-bold text-[#8FD19E]">92% Match</span>
-                        <div className="text-[10px] text-[#8FD19E] font-mono">98% Trust Score</div>
+                        <span className="text-lg font-bold text-[#8FD19E]">
+                          <AnimatedCounter value={92} suffix="% Match" />
+                        </span>
+                        <div className="text-[10px] text-[#8FD19E] font-mono">
+                          <AnimatedCounter value={98} suffix="% Trust Score" />
+                        </div>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-3 gap-2 pt-2 border-t border-[#383A38] text-xs">
                       <div className="p-2 rounded bg-[#242724]">
                         <span className="text-[10px] text-[#8A8B82] block">Technical Rubric</span>
-                        <span className="font-semibold text-[#D9DADF]">95 / 100</span>
+                        <span className="font-semibold text-[#D9DADF]">
+                          <AnimatedCounter value={95} suffix=" / 100" />
+                        </span>
                       </div>
                       <div className="p-2 rounded bg-[#242724]">
                         <span className="text-[10px] text-[#8A8B82] block">Voice Screening</span>
@@ -304,7 +311,9 @@ export default function HomePage() {
                       <p className="text-xs text-[#8A8B82]">5 yrs exp &bull; Product Engineer</p>
                     </div>
                     <div className="text-right">
-                      <span className="text-sm font-bold text-[#FCF8D8]">88% Match</span>
+                      <span className="text-sm font-bold text-[#FCF8D8]">
+                        <AnimatedCounter value={88} suffix="% Match" />
+                      </span>
                       <div className="text-[10px] text-[#8A8B82] font-mono">Awaiting Review</div>
                     </div>
                   </div>
@@ -575,13 +584,17 @@ export default function HomePage() {
 
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="bg-[#1E201E] border border-[#2E312E] p-4 rounded-xl text-center">
-                  <div className="text-2xl font-bold text-[#8FD19E]">98%</div>
+                  <div className="text-2xl font-bold text-[#8FD19E]">
+                    <AnimatedCounter value={98} suffix="%" />
+                  </div>
                   <div className="text-xs text-[#D9DADF] font-semibold mt-1">Trust Score</div>
                   <div className="text-[10px] text-[#8A8B82] mt-0.5">High integrity session</div>
                 </div>
 
                 <div className="bg-[#1E201E] border border-[#2E312E] p-4 rounded-xl text-center">
-                  <div className="text-2xl font-bold text-[#FCF8D8]">0</div>
+                  <div className="text-2xl font-bold text-[#FCF8D8]">
+                    <AnimatedCounter value={0} />
+                  </div>
                   <div className="text-xs text-[#D9DADF] font-semibold mt-1">Tab Switches</div>
                   <div className="text-[10px] text-[#8A8B82] mt-0.5">Continuous focus</div>
                 </div>
@@ -593,7 +606,9 @@ export default function HomePage() {
                 </div>
 
                 <div className="bg-[#1E201E] border border-[#2E312E] p-4 rounded-xl text-center">
-                  <div className="text-2xl font-bold text-[#DD700B]">100%</div>
+                  <div className="text-2xl font-bold text-[#DD700B]">
+                    <AnimatedCounter value={100} suffix="%" />
+                  </div>
                   <div className="text-xs text-[#D9DADF] font-semibold mt-1">Audit Trail</div>
                   <div className="text-[10px] text-[#8A8B82] mt-0.5">Immutable record</div>
                 </div>
