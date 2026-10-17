@@ -178,7 +178,7 @@ export default function HomePage() {
                     size="lg"
                     className="w-full text-sm font-semibold flex items-center justify-center gap-2"
                   >
-                    <span>Enter Recruiting Portal</span>
+                    <span className="[word-spacing:0.25em] tracking-wide">Enter Recruiting Portal</span>
                     <ArrowRight className="w-4 h-4" />
                   </NeuButton>
                 </Link>
@@ -191,7 +191,7 @@ export default function HomePage() {
                     className="w-full text-sm flex items-center justify-center gap-2 border border-[#343834] hover:border-[#DD700B]"
                   >
                     <Mic className="w-4 h-4 text-[#DD700B]" />
-                    <span>Launch Voice Screening</span>
+                    <span className="[word-spacing:0.25em] tracking-wide">Launch Voice Screening</span>
                   </NeuButton>
                 </Link>
               </div>
@@ -644,7 +644,7 @@ export default function HomePage() {
                   variant="primary"
                   className="px-7 py-3 text-sm font-semibold flex items-center gap-2"
                 >
-                  <span>Enter Recruiting Portal</span>
+                  <span className="[word-spacing:0.25em] tracking-wide">Enter Recruiting Portal</span>
                   <ArrowRight className="w-4 h-4" />
                 </NeuButton>
               </Link>
@@ -655,7 +655,7 @@ export default function HomePage() {
                   className="px-6 py-3 text-sm border border-[#343834]"
                 >
                   <Mic className="w-4 h-4 text-[#DD700B] mr-2" />
-                  Try Voice Screening
+                  <span className="[word-spacing:0.25em] tracking-wide">Try Voice Screening</span>
                 </NeuButton>
               </Link>
             </div>

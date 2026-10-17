@@ -33,7 +33,7 @@ export const NeuButton: React.FC<NeuButtonProps> = ({
 
   return (
     <button
-      className={`inline-flex items-center justify-center gap-2 focus-visible:ring-2 focus-visible:ring-[#DD700B] focus-visible:outline-none select-none ${sizeStyles[size]} ${variantStyles[variant]} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 focus-visible:ring-2 focus-visible:ring-[#DD700B] focus-visible:outline-none select-none tracking-wide [word-spacing:0.22em] ${sizeStyles[size]} ${variantStyles[variant]} ${className}`}
       disabled={disabled}
       {...props}
     >
