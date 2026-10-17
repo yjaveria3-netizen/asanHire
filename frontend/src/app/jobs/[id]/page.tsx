@@ -177,7 +177,13 @@ export default function PublicJobPage() {
         {/* Header */}
         <header className="flex items-center justify-between pb-4 border-b border-[#D9DADF]/10">
           <Logo variant="full" size="lg" href="/" priority />
-          <span className="text-xs font-mono text-[#8A8B82]">Careers Portal</span>
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 text-sm text-[#8A8B82] hover:text-[#DD700B] transition-colors py-1 px-2.5 rounded-lg hover:bg-[#242724]"
+          >
+            <ArrowLeft className="w-4 h-4 text-[#DD700B]" />
+            <span>Return to Home</span>
+          </Link>
         </header>
 
         {/* Job Title & Summary Card */}

@@ -492,6 +492,7 @@ class JobDetailResponse(BaseModel):
     id: str
     owner_id: Optional[str] = None
     title: str
+    department: Optional[str] = "General"
     description: str
     skills: List[str] = Field(default_factory=list)
     experience_level: Optional[str] = None

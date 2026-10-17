@@ -283,35 +283,37 @@ async def register_role(req: RegisterRoleRequest):
     role_type = req.role.strip().lower()
 
     if role_type == "hr":
-        # 1. user_roles: HR
+        # 1. user_roles: HR (pending until approved)
         try:
             db.table("user_roles").upsert({
                 "user_id": req.user_id,
                 "role": "hr",
+                "status": "pending",
                 "must_change_password": False,
             }, on_conflict="user_id").execute()
         except Exception as e:
             logger.warning(f"Error upserting user_roles: {e}")
 
-        # 2. hr_profiles: PENDING
+        # 2. hr_profiles: user_id is the key, full_name and job_title are required
         try:
             db.table("hr_profiles").upsert({
-                "id": req.user_id,
+                "user_id": req.user_id,
                 "contact_email": clean_email,
-                "full_name": clean_name,
-                "organization": clean_org,
-                "status": "pending",
-            }, on_conflict="id").execute()
+                "full_name": clean_name or "HR Recruiter",
+                "organization": clean_org or "Independent",
+                "job_title": "Recruiter",
+                "reply_to_enabled": True,
+            }, on_conflict="user_id").execute()
         except Exception as e:
             logger.warning(f"Error upserting hr_profiles: {e}")
 
-        # 3. hr_access_requests: record request
+        # 3. hr_access_requests: record request for admin portal approval
         try:
             db.table("hr_access_requests").insert({
                 "user_id": req.user_id,
-                "email": clean_email,
-                "full_name": clean_name,
-                "organization": clean_org,
+                "full_name": clean_name or "HR Recruiter",
+                "organization": clean_org or "Independent",
+                "job_title": "Recruiter",
                 "reason": req.reason or "HR Recruiter Portal Registration",
                 "status": "pending",
             }).execute()

@@ -2,17 +2,28 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Logo } from "@/components/brand/Logo";
 import { LayoutDashboard, Briefcase, PlusCircle, LogOut, ShieldAlert } from "lucide-react";
 import { api } from "@/lib/api";
+import { createClient } from "@/lib/supabase/client";
 
 export const NeuSidebar: React.FC = () => {
   const pathname = usePathname();
+  const router = useRouter();
   const [unansweredCount, setUnansweredCount] = useState<number>(0);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => {
+      if (isMounted && data?.user?.email) {
+        setUserEmail(data.user.email);
+      }
+    }).catch(() => {});
+
     api
       .getHROverrides()
       .then((overrides) => {
@@ -33,6 +44,25 @@ export const NeuSidebar: React.FC = () => {
     };
   }, [pathname]);
 
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    try {
+      const supabase = createClient();
+      await supabase.auth.signOut();
+    } catch {
+      // Handled silently
+    } finally {
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.clear();
+          sessionStorage.clear();
+        } catch {}
+      }
+      router.push("/login?logout=true");
+      router.refresh();
+    }
+  };
+
   const navItems = [
     { label: "Overview", href: "/hr", icon: LayoutDashboard },
     { label: "Jobs", href: "/hr/jobs", icon: Briefcase },
@@ -41,7 +71,7 @@ export const NeuSidebar: React.FC = () => {
   ];
 
   return (
-    <aside className="w-20 md:w-64 min-h-screen bg-[#242724] border-r border-[#D9DADF]/5 p-3 md:p-5 flex flex-col justify-between shrink-0 transition-all">
+    <aside className="w-20 md:w-64 h-screen sticky top-0 bg-[#242724] border-r border-[#D9DADF]/5 p-3 md:p-5 flex flex-col justify-between shrink-0 transition-all overflow-hidden">
       <div>
         {/* Brand Logo Header: Full on md+, Mark on small screens / collapsed */}
         <div className="flex items-center justify-center md:justify-start px-1 md:px-3 py-4 mb-6">
@@ -91,18 +121,22 @@ export const NeuSidebar: React.FC = () => {
 
       {/* User Session Footer */}
       <div className="pt-4 border-t border-[#8A8B82]/20">
-        <div className="flex items-center justify-between px-2 md:px-3 py-2 rounded-xl bg-[#2A2D2A]/60">
+        <div className="flex items-center justify-between px-2 md:px-3 py-2.5 rounded-xl bg-[#2A2D2A]/60">
           <div className="hidden md:block truncate">
-            <p className="text-xs font-semibold text-[#D9DADF] truncate">hr@asanhire.dev</p>
-            <p className="text-[10px] text-[#8A8B82]">Lead Recruiter</p>
+            <p className="text-sm font-semibold text-[#D9DADF] truncate" title={userEmail || "Recruiter"}>
+              {userEmail || "Recruiter Workspace"}
+            </p>
+            <p className="text-xs text-[#8A8B82] font-mono">Lead Recruiter</p>
           </div>
-          <Link
-            href="/login"
-            className="p-1.5 text-[#8A8B82] hover:text-[#E57373] transition-colors mx-auto md:mx-0"
-            title="Sign out"
+          <button
+            type="button"
+            onClick={handleLogout}
+            disabled={loggingOut}
+            className="p-2 text-[#8A8B82] hover:text-[#E57373] hover:bg-[#1E201E] rounded-lg transition-colors mx-auto md:mx-0 disabled:opacity-50"
+            title="Sign out of Recruiter Portal"
           >
             <LogOut className="w-4 h-4" />
-          </Link>
+          </button>
         </div>
       </div>
     </aside>

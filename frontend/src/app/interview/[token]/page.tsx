@@ -24,6 +24,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   XCircle,
+  X,
   HelpCircle,
   Shield,
   RotateCcw,
@@ -442,7 +443,7 @@ export default function InterviewRoomPage() {
   // RENDER: Active Interview Room
   // =========================================================================
   return (
-    <div className="min-h-screen bg-[#1E201E] text-[#D9DADF] p-4 md:p-6 flex flex-col justify-between selection:bg-[#DD700B] selection:text-[#1E201E] relative">
+    <div className="min-h-screen h-full overflow-y-auto bg-[#1E201E] text-[#D9DADF] p-4 md:p-6 flex flex-col justify-between selection:bg-[#DD700B] selection:text-[#1E201E] relative">
       {/* Step 1 & 2 Gate: Consent, Rules & Fullscreen Start */}
       {!hasEnteredFullscreen && (
         <FullscreenGate
@@ -455,7 +456,15 @@ export default function InterviewRoomPage() {
       {/* Fullscreen Exit Advisory Overlay Modal */}
       {hasEnteredFullscreen && fullscreenExited && !isCompleted && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1E201E]/90 backdrop-blur-md">
-          <div className="neu-raised max-w-md w-full rounded-2xl p-6 border border-[#DD700B]/30 flex flex-col items-center text-center gap-4">
+          <div className="neu-raised max-w-md w-full rounded-2xl p-6 border border-[#DD700B]/30 flex flex-col items-center text-center gap-4 relative">
+            <button
+              type="button"
+              onClick={() => setFullscreenExited(false)}
+              className="absolute right-4 top-4 p-2 text-[#8A8B82] hover:text-[#D9DADF] rounded-lg transition-colors"
+              title="Close advisory"
+            >
+              <X className="w-5 h-5" />
+            </button>
             <div className="w-12 h-12 rounded-full bg-[#DD700B]/10 border border-[#DD700B]/30 flex items-center justify-center text-[#DD700B]">
               <AlertTriangle className="w-6 h-6" />
             </div>
@@ -463,14 +472,24 @@ export default function InterviewRoomPage() {
             <p className="text-xs text-[#8A8B82] leading-relaxed">
               Your interview must remain in full-screen mode to ensure testing integrity. Please return to full-screen mode to proceed.
             </p>
-            <NeuButton
-              variant="primary"
-              size="md"
-              onClick={handleReenterFullscreen}
-              className="w-full flex items-center justify-center gap-2"
-            >
-              <Maximize2 className="w-4 h-4" /> Re-enter Fullscreen
-            </NeuButton>
+            <div className="flex flex-col sm:flex-row items-center gap-2 w-full">
+              <NeuButton
+                variant="secondary"
+                size="md"
+                onClick={() => setFullscreenExited(false)}
+                className="w-full sm:w-1/2 text-xs"
+              >
+                Dismiss Advisory
+              </NeuButton>
+              <NeuButton
+                variant="primary"
+                size="md"
+                onClick={handleReenterFullscreen}
+                className="w-full sm:w-1/2 flex items-center justify-center gap-2 text-xs"
+              >
+                <Maximize2 className="w-4 h-4" /> Re-enter Fullscreen
+              </NeuButton>
+            </div>
           </div>
         </div>
       )}
@@ -532,7 +551,7 @@ export default function InterviewRoomPage() {
       </header>
 
       {/* Main Workspace */}
-      <main className="max-w-7xl mx-auto w-full my-auto py-4 flex flex-col gap-4">
+      <main className="max-w-7xl mx-auto w-full flex-1 py-4 flex flex-col gap-4">
         {/* Top Active Tab Violation Banner (Stays at TOP) */}
         {activeTabAlert && (
           <div className="w-full bg-[#E57373]/20 border border-[#E57373] text-[#E57373] p-3.5 rounded-xl flex items-center justify-between text-xs font-semibold animate-pulse shadow-lg">

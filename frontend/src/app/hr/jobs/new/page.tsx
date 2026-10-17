@@ -55,19 +55,30 @@ export default function NewJobPage() {
 
     setLoading(true);
 
+    const parsedSkills = requirements
+      .split(/[\n,;]+/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0)
+      .slice(0, 20);
+
     const payload = {
-      title,
-      department,
-      description,
-      requirements,
-      top_n: parseInt(topN, 10),
-      min_score: parseFloat(minScore),
+      title: title.trim(),
+      department: department.trim(),
+      description: description.trim(),
+      requirements: requirements.trim(),
+      skills: parsedSkills.length > 0 ? parsedSkills : ["General"],
+      top_n: Math.max(1, Math.min(100, parseInt(topN, 10) || 5)),
+      min_score: Math.max(0, Math.min(100, Math.round(Number(minScore) || 60))),
       deadline: deadlineDate.toISOString(), // Strictly ISO 8601 with Z
     };
 
     try {
       const created = await api.createHRJob(payload);
-      router.push(`/hr/jobs/${created.id}`);
+      if (created && created.id) {
+        router.push(`/hr/jobs/${created.id}`);
+      } else {
+        throw new Error("Job was created but no requisition ID was returned.");
+      }
     } catch (err: any) {
       setFormError(err.message || "Failed to create job requisition.");
     } finally {
@@ -77,20 +88,23 @@ export default function NewJobPage() {
 
   return (
     <div className="max-w-3xl mx-auto flex flex-col gap-6">
-      <div className="flex items-center gap-3">
-        <Link href="/hr/jobs">
-          <NeuButton size="sm" variant="secondary">
-            <ArrowLeft className="w-4 h-4 mr-1" /> Back to Jobs
-          </NeuButton>
+      <div>
+        <Link
+          href="/hr/jobs"
+          className="inline-flex items-center gap-2 text-sm text-[#8A8B82] hover:text-[#DD700B] transition-colors py-1 px-2 -ml-2 rounded-lg hover:bg-[#242724]"
+        >
+          <ArrowLeft className="w-4 h-4 text-[#DD700B]" />
+          <span>Back to Jobs</span>
         </Link>
-        <div className="flex items-center gap-3">
-          <Logo variant="mark" size="md" href={null} />
-          <div>
-            <h1 className="text-2xl font-bold text-[#D9DADF]">Post New Requisition</h1>
-            <p className="text-xs text-[#8A8B82] mt-0.5">
-              Define requirements. The Rubric Agent will automatically synthesize objective evaluation criteria.
-            </p>
-          </div>
+      </div>
+
+      <div className="flex items-center gap-3.5">
+        <Logo variant="mark" size="md" href={null} />
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-[#D9DADF]">Post New Requisition</h1>
+          <p className="text-sm text-[#8A8B82] mt-1 leading-relaxed">
+            Define role requirements. The AI Rubric Agent will automatically synthesize objective, fair evaluation criteria.
+          </p>
         </div>
       </div>
 
@@ -189,8 +203,16 @@ export default function NewJobPage() {
 
           <div className="flex justify-end pt-3">
             <NeuButton type="submit" variant="primary" size="lg" disabled={loading}>
-              {loading ? "Generating Rubric & Publishing..." : "Publish Job & Generate Rubric"}{" "}
-              <ArrowRight className="w-4 h-4 ml-1" />
+              {loading ? (
+                <span className="flex items-center gap-2">
+                  <span className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                  Synthesizing evaluation rubric with Gemini AI (~5-8s)...
+                </span>
+              ) : (
+                <>
+                  Publish Job & Generate Rubric <ArrowRight className="w-4 h-4 ml-1" />
+                </>
+              )}
             </NeuButton>
           </div>
         </form>

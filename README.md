@@ -56,8 +56,7 @@ asanhire/
 │   │   │       ├── jobs/page.tsx  # Job listings
 │   │   │       ├── jobs/new/page.tsx # Post new job
 │   │   │       ├── jobs/[id]/page.tsx # Candidate leaderboard
-│   │   │       ├── candidates/[id]/page.tsx # Candidate dossier & overrides
-│   │   │       └── design-check/page.tsx # Design system verification
+│   │   │       └── candidates/[id]/page.tsx # Candidate dossier & overrides
 │   │   ├── components/
 │   │   │   ├── neu/               # Reusable neumorphic design components
 │   │   │   ├── hr/                # HR admin candidate tables, modals, timelines
@@ -160,7 +159,6 @@ npm run dev
 * **Public Job Application:** [http://localhost:3000/jobs/11111111-1111-1111-1111-111111111111](http://localhost:3000/jobs/11111111-1111-1111-1111-111111111111)
 * **Candidate Voice Interview Room:** [http://localhost:3000/interview/demo-sample-token](http://localhost:3000/interview/demo-sample-token)
 * **HR Recruiter Dashboard:** [http://localhost:3000/hr](http://localhost:3000/hr)
-* **Neumorphic Theme Verification:** [http://localhost:3000/hr/design-check](http://localhost:3000/hr/design-check)
 
 ---
 
