@@ -25,6 +25,7 @@ from app.models.schemas import (
     OverrideQuestionItem,
     AdminOverrideReviewRequest,
     AdminOverrideQuestionRequest,
+    HRAccessRequestItem,
 )
 from app.services.email import send_templated_email
 
@@ -538,6 +539,123 @@ async def get_hr_user_detail(
         last_active_at=profile.get("last_active_at") or profile.get("created_at"),
         jobs=formatted_jobs,
     )
+
+
+@router.get(
+    "/hr-requests",
+    response_model=List[HRAccessRequestItem],
+    summary="List pending and recent HR access requests for admin review",
+)
+async def list_hr_access_requests(
+    status_filter: Optional[str] = Query(None, alias="status"),
+    admin: AdminUser = Depends(get_admin_user),
+) -> List[HRAccessRequestItem]:
+    _assert_password_not_locked(admin)
+    client = get_supabase_service_client()
+    query = client.table("hr_access_requests").select("*")
+    if status_filter:
+        query = query.eq("status", status_filter.strip().lower())
+    res = query.order("created_at", desc=True).limit(100).execute()
+    items = []
+    for row in (res.data or []):
+        items.append(HRAccessRequestItem(
+            id=str(row["id"]),
+            user_id=row.get("user_id"),
+            email=str(row.get("email") or ""),
+            full_name=str(row.get("full_name") or ""),
+            organization=str(row.get("organization") or ""),
+            reason=row.get("reason"),
+            status=str(row.get("status") or "pending"),
+            created_at=row.get("created_at"),
+            reviewed_at=row.get("reviewed_at"),
+            reviewed_by=row.get("reviewed_by"),
+        ))
+    return items
+
+
+@router.post(
+    "/hr-requests/{request_id}/approve",
+    summary="Approve HR recruiter access request",
+)
+async def approve_hr_access_request(
+    request_id: str,
+    admin: AdminUser = Depends(get_admin_user),
+):
+    _assert_password_not_locked(admin)
+    client = get_supabase_service_client()
+    res = client.table("hr_access_requests").select("*").eq("id", request_id).execute()
+    if not res.data:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Access request not found")
+
+    req_data = res.data[0]
+    now_utc = datetime.now(timezone.utc).isoformat()
+    client.table("hr_access_requests").update({
+        "status": "approved",
+        "reviewed_at": now_utc,
+        "reviewed_by": admin.id,
+    }).eq("id", request_id).execute()
+
+    user_id = req_data.get("user_id")
+    email = req_data.get("email")
+    if user_id:
+        client.table("hr_profiles").upsert({
+            "id": user_id,
+            "status": "active",
+            "contact_email": email,
+            "full_name": req_data.get("full_name", ""),
+            "organization": req_data.get("organization", ""),
+        }, on_conflict="id").execute()
+
+    _write_admin_audit_log(
+        client,
+        admin_id=admin.id,
+        action="admin_approved_hr_request",
+        target_type="hr_access_request",
+        target_id=request_id,
+        details={"user_id": user_id, "email": email},
+    )
+
+    return {"success": True, "message": "HR recruiter access approved successfully."}
+
+
+@router.post(
+    "/hr-requests/{request_id}/reject",
+    summary="Reject HR recruiter access request",
+)
+async def reject_hr_access_request(
+    request_id: str,
+    admin: AdminUser = Depends(get_admin_user),
+):
+    _assert_password_not_locked(admin)
+    client = get_supabase_service_client()
+    res = client.table("hr_access_requests").select("*").eq("id", request_id).execute()
+    if not res.data:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Access request not found")
+
+    req_data = res.data[0]
+    now_utc = datetime.now(timezone.utc).isoformat()
+    client.table("hr_access_requests").update({
+        "status": "rejected",
+        "reviewed_at": now_utc,
+        "reviewed_by": admin.id,
+    }).eq("id", request_id).execute()
+
+    user_id = req_data.get("user_id")
+    if user_id:
+        client.table("hr_profiles").update({
+            "status": "suspended",
+        }).eq("id", user_id).execute()
+
+    _write_admin_audit_log(
+        client,
+        admin_id=admin.id,
+        action="admin_rejected_hr_request",
+        target_type="hr_access_request",
+        target_id=request_id,
+        details={"user_id": user_id, "email": req_data.get("email")},
+    )
+
+    return {"success": True, "message": "HR recruiter access rejected."}
 
 
 @router.get("/candidates/{email_key}", response_model=AdminCandidateSummaryResponse, summary="Candidate cross-job history (no resume/transcripts)")

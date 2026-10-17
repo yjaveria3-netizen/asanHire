@@ -1,4 +1,4 @@
-import { Job, Candidate, JobProgress, DeletePreview, HROverrideEvent, AdminOverview, AdminHRUser, AdminCandidateLookupResult } from "./types";
+import { Job, Candidate, JobProgress, DeletePreview, HROverrideEvent, AdminOverview, AdminHRUser, AdminCandidateLookupResult, HRAccessRequest } from "./types";
 import { createClient } from "./supabase/client";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -546,9 +546,14 @@ export const api = {
 
   // HR Overrides
   getHROverrides: async (): Promise<HROverrideEvent[]> => {
-    return request<HROverrideEvent[]>("/hr/overrides")
-      .catch(() => request<HROverrideEvent[]>("/api/hr/overrides"))
-      .catch(() => []);
+    try {
+      const res = await request<any>("/hr/overrides").catch(() => request<any>("/api/hr/overrides"));
+      if (Array.isArray(res)) return res;
+      if (res && Array.isArray(res.overrides)) return res.overrides;
+      return [];
+    } catch {
+      return [];
+    }
   },
 
   answerAdminQuestion: async (overrideId: string, questionId: string, answer: string): Promise<any> => {
@@ -661,6 +666,52 @@ export const api = {
       request<any>(`/api/admin/overrides/${overrideId}/question`, {
         method: "POST",
         body: JSON.stringify({ question }),
+      })
+    );
+  },
+
+  registerRole: async (payload: {
+    user_id: string;
+    email: string;
+    full_name?: string;
+    role: "hr" | "candidate";
+    organization?: string;
+    reason?: string;
+  }): Promise<any> => {
+    return request<any>("/public/register-role", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }).catch(() =>
+      request<any>("/api/public/register-role", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      })
+    );
+  },
+
+  getAdminHRRequests: async (status?: string): Promise<HRAccessRequest[]> => {
+    const qs = status ? `?status=${status}` : "";
+    return request<HRAccessRequest[]>(`/admin/hr-requests${qs}`)
+      .catch(() => request<HRAccessRequest[]>(`/api/admin/hr-requests${qs}`))
+      .catch(() => []);
+  },
+
+  approveAdminHRRequest: async (requestId: string): Promise<any> => {
+    return request<any>(`/admin/hr-requests/${requestId}/approve`, {
+      method: "POST",
+    }).catch(() =>
+      request<any>(`/api/admin/hr-requests/${requestId}/approve`, {
+        method: "POST",
+      })
+    );
+  },
+
+  rejectAdminHRRequest: async (requestId: string): Promise<any> => {
+    return request<any>(`/admin/hr-requests/${requestId}/reject`, {
+      method: "POST",
+    }).catch(() =>
+      request<any>(`/api/admin/hr-requests/${requestId}/reject`, {
+        method: "POST",
       })
     );
   },

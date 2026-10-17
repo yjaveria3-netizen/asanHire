@@ -44,9 +44,9 @@ const config: Config = {
         "cta-hover": "0 6px 20px rgba(221, 112, 11, 0.6)",
       },
       fontFamily: {
-        sans: ["var(--font-paquito)", "Paquito", "Georgia", "Cambria", "'Times New Roman'", "serif"],
-        serif: ["var(--font-paquito)", "Paquito", "Georgia", "Cambria", "'Times New Roman'", "serif"],
-        mono: ["var(--font-paquito)", "Paquito", "Georgia", "Cambria", "'Times New Roman'", "serif"],
+        sans: ["var(--font-slab)", "Roboto Slab", "Rockwell", "Rockwell Nova", "Clarendon", "serif"],
+        serif: ["var(--font-slab)", "Roboto Slab", "Rockwell", "Rockwell Nova", "Clarendon", "serif"],
+        mono: ["var(--font-slab)", "Roboto Slab", "Rockwell", "Rockwell Nova", "Clarendon", "serif"],
       },
     },
   },

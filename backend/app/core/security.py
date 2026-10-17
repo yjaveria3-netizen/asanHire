@@ -98,15 +98,39 @@ async def get_hr_user(credentials: Optional[HTTPAuthorizationCredentials] = Depe
     user_id = str(data["id"])
     email = data.get("email", "")
 
-    # Sync contact_email in hr_profiles (Part G1 / F5 requirement)
+    db = get_supabase_service_client()
+    # Check HR approval status in hr_profiles / hr_access_requests
     try:
-        db = get_supabase_service_client()
-        db.table("hr_profiles").upsert({
-            "id": user_id,
-            "contact_email": email,
-        }, on_conflict="id").execute()
-    except Exception:
-        pass
+        p_res = db.table("hr_profiles").select("status").eq("id", user_id).execute()
+        if p_res and p_res.data:
+            hr_status = p_res.data[0].get("status", "active")
+            if hr_status == "pending":
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Recruiter account pending administrator approval. Please contact admin@asanhire.dev.",
+                )
+            if hr_status == "suspended":
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Recruiter account suspended. Please contact administrator.",
+                )
+        else:
+            # Check if there is an access request pending
+            req_res = db.table("hr_access_requests").select("status").eq("user_id", user_id).execute()
+            if req_res and req_res.data and req_res.data[0].get("status") == "pending":
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Recruiter account pending administrator approval. Please contact admin@asanhire.dev.",
+                )
+            # Sync contact_email in hr_profiles (Part G1 / F5 requirement)
+            db.table("hr_profiles").upsert({
+                "id": user_id,
+                "contact_email": email,
+            }, on_conflict="id").execute()
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.warning(f"Error checking hr_profiles status: {e}")
 
     hr_user = HRUser(id=user_id, email=email, role="hr")
     _prune_auth_cache(now)
@@ -210,10 +234,14 @@ async def get_current_user_profile(
                 db.table("hr_profiles").update({"contact_email": email}).eq("id", user_id).execute()
                 hr_profile_data["contact_email"] = email
         else:
+            # Check if pending in hr_access_requests
+            req_res = db.table("hr_access_requests").select("status").eq("user_id", user_id).execute()
+            status_val = "pending" if (req_res and req_res.data and req_res.data[0].get("status") == "pending") else "active"
+            hr_profile_data["status"] = status_val
             db.table("hr_profiles").insert({
                 "id": user_id,
                 "contact_email": email,
-                "status": "active",
+                "status": status_val,
             }).execute()
     except Exception:
         pass

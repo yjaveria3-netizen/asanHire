@@ -1,29 +1,14 @@
 import type { Metadata, Viewport } from "next";
-import localFont from "next/font/local";
+import { Roboto_Slab } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 
-const paquito = localFont({
-  src: [
-    {
-      path: "../../public/fonts/paquito/paquito-400.woff2",
-      weight: "400",
-      style: "normal",
-    },
-    {
-      path: "../../public/fonts/paquito/paquito-500.woff2",
-      weight: "500",
-      style: "normal",
-    },
-    {
-      path: "../../public/fonts/paquito/paquito-700.woff2",
-      weight: "700",
-      style: "normal",
-    },
-  ],
-  variable: "--font-paquito",
+const slab = Roboto_Slab({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700", "800"],
+  variable: "--font-slab",
   display: "swap",
-  fallback: ["Georgia", "Cambria", "'Times New Roman'", "Times", "serif"],
+  fallback: ["Rockwell", "Rockwell Nova", "Clarendon", "Georgia", "serif"],
 });
 
 export const metadata: Metadata = {
@@ -80,7 +65,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`dark ${paquito.variable}`}>
+    <html lang="en" className={`dark ${slab.variable}`}>
       <body className="min-h-screen bg-[#1E201E] text-[#D9DADF] selection:bg-[#DD700B] selection:text-[#1E201E]">
         {children}
         <Toaster position="top-right" richColors />

@@ -18,8 +18,9 @@ export const NeuSidebar: React.FC = () => {
       .then((overrides) => {
         if (!isMounted) return;
         let count = 0;
-        overrides.forEach((o) => {
-          o.questions?.forEach((q) => {
+        const list = Array.isArray(overrides) ? overrides : ((overrides as any)?.overrides || []);
+        list.forEach((o: any) => {
+          o.questions?.forEach((q: any) => {
             if (!q.answer) count++;
           });
         });
