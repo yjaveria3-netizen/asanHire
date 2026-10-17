@@ -99,6 +99,13 @@ export default function InterviewRoomPage() {
     };
   }, [token]);
 
+  // 1b. Scroll to top on mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+    }
+  }, []);
+
   // 2. Speech Synthesis helper
   const speakText = useCallback(
     (text: string) => {
@@ -135,14 +142,18 @@ export default function InterviewRoomPage() {
       recognition.lang = "en-US";
 
       recognition.onresult = (event: any) => {
-        let transcriptChunk = "";
+        let finalChunk = "";
         for (let i = event.resultIndex; i < event.results.length; i++) {
-          transcriptChunk += event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            finalChunk += event.results[i][0].transcript + " ";
+          }
         }
-        setCandidateAnswer((prev) => {
-          const combined = (prev ? prev.trim() + " " : "") + transcriptChunk.trim();
-          return combined.slice(0, 4000);
-        });
+        if (finalChunk.trim()) {
+          setCandidateAnswer((prev) => {
+            const combined = (prev ? prev.trim() + " " : "") + finalChunk.trim();
+            return combined.slice(0, 4000);
+          });
+        }
       };
 
       recognition.onerror = (err: any) => {
@@ -171,6 +182,9 @@ export default function InterviewRoomPage() {
   // 4. Handle "Enter Fullscreen and Start"
   const handleStartInterview = async () => {
     setHasEnteredFullscreen(true);
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+    }
     try {
       const res = await api.startInterview(token);
       const qText = res.initial_question || res.spoken_text || "Please introduce yourself and your technical background.";

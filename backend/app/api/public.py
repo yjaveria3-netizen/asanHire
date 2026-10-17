@@ -470,12 +470,29 @@ async def get_candidate_active_interview(email: str):
             db.table("interviews")
             .select("id, status, expires_at, created_at")
             .eq("candidate_id", cand_id)
-            .eq("status", "pending")
+            .in_("status", ["pending", "in_progress"])
             .eq("voided", False)
             .order("created_at", desc=True)
             .execute()
         )
         interviews = int_res.data if (int_res and int_res.data) else []
+        if not interviews:
+            # Auto-provision active interview row for invited candidate if missing
+            import secrets, hashlib
+            token = secrets.token_urlsafe(32)
+            thash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+            now_utc = datetime.now(timezone.utc)
+            exp_iso = (now_utc + timedelta(hours=48)).isoformat()
+            ins = db.table("interviews").insert({
+                "candidate_id": cand_id,
+                "token_hash": thash,
+                "expires_at": exp_iso,
+                "status": "pending",
+                "voided": False,
+                "trust_score": 100,
+            }).execute()
+            interviews = ins.data or []
+
         if not interviews:
             return {"has_interview": False}
 

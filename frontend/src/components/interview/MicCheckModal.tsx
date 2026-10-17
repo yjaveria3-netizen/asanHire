@@ -136,12 +136,19 @@ export const MicCheckModal: React.FC<MicCheckModalProps> = ({
           recognition.lang = "en-US";
 
           recognition.onresult = (e: any) => {
-            let combined = "";
+            let finalTranscript = "";
+            let interimTranscript = "";
             for (let i = 0; i < e.results.length; i++) {
-              combined += e.results[i][0].transcript + " ";
+              const res = e.results[i];
+              if (res.isFinal) {
+                finalTranscript += res[0].transcript + " ";
+              } else {
+                interimTranscript += res[0].transcript;
+              }
             }
-            if (combined.trim()) {
-              setTranscript(combined.trim());
+            const clean = (finalTranscript + interimTranscript).trim();
+            if (clean) {
+              setTranscript(clean);
               setHasDetectedAudio(true);
             }
           };

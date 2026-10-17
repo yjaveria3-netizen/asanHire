@@ -68,43 +68,70 @@ export const CameraCheckModal: React.FC<CameraCheckModalProps> = ({
       const frame = ctx.getImageData(0, 0, W, H);
       const data = frame.data;
 
-      // Define center reticle region: x: [22..58], y: [10..50]
-      const minX = 22;
-      const maxX = 58;
-      const minY = 10;
-      const maxY = 50;
+      // Define center reticle region: x: [26..54], y: [12..48]
+      const minX = 26;
+      const maxX = 54;
+      const minY = 12;
+      const maxY = 48;
       const reticleArea = (maxX - minX) * (maxY - minY);
 
       let centerSkinPixels = 0;
-      let centerLuminanceSum = 0;
+      let totalSkinPixels = 0;
+      let sumX = 0;
+      let sumY = 0;
+      let totalLuminance = 0;
 
-      for (let y = minY; y < maxY; y++) {
-        for (let x = minX; x < maxX; x++) {
+      for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
           const idx = (y * W + x) * 4;
           const r = data[idx];
           const g = data[idx + 1];
           const b = data[idx + 2];
 
-          centerLuminanceSum += 0.299 * r + 0.587 * g + 0.114 * b;
+          totalLuminance += 0.299 * r + 0.587 * g + 0.114 * b;
 
-          // Normalized skin tone heuristic (supports diverse skin tones)
+          // YCbCr Human Skin Filter
+          const cb = 128 - 0.168736 * r - 0.331264 * g + 0.5 * b;
+          const cr = 128 + 0.5 * r - 0.418688 * g - 0.081312 * b;
+
           const isSkin =
-            r > 50 &&
-            g > 35 &&
-            b > 20 &&
-            r > b &&
-            (r - g >= 8 || Math.abs(r - g) <= 15) &&
-            Math.max(r, g, b) - Math.min(r, g, b) > 12;
+            cb >= 77 &&
+            cb <= 127 &&
+            cr >= 133 &&
+            cr <= 173 &&
+            r > g &&
+            r - g >= 6 &&
+            r > 42;
 
-          if (isSkin) centerSkinPixels++;
+          if (isSkin) {
+            totalSkinPixels++;
+            sumX += x;
+            sumY += y;
+            if (x >= minX && x <= maxX && y >= minY && y <= maxY) {
+              centerSkinPixels++;
+            }
+          }
         }
       }
 
       const reticleSkinRatio = centerSkinPixels / reticleArea;
-      const avgLuminance = centerLuminanceSum / reticleArea;
+      const avgLuminance = totalLuminance / (W * H);
+      const centerConcentration = totalSkinPixels > 0 ? centerSkinPixels / totalSkinPixels : 0;
+      const centroidX = totalSkinPixels > 0 ? sumX / totalSkinPixels : 0;
+      const centroidY = totalSkinPixels > 0 ? sumY / totalSkinPixels : 0;
 
-      // Face is considered centered only if reticle has >= 14% skin density and frame isn't pitch black or blown out
-      const isCenteredAndClear = reticleSkinRatio >= 0.14 && avgLuminance > 30 && avgLuminance < 240;
+      // Face is considered centered only if centroid is in the center column, at least 50% skin in center, and reticle density >= 12%
+      const isCenteredAndClear =
+        totalSkinPixels >= 35 &&
+        centroidX >= 30 &&
+        centroidX <= 50 &&
+        centroidY >= 14 &&
+        centroidY <= 46 &&
+        centerConcentration >= 0.50 &&
+        reticleSkinRatio >= 0.12 &&
+        avgLuminance > 22 &&
+        avgLuminance < 240;
+
       setIsFaceDetected(isCenteredAndClear);
     }
   }, []);
